@@ -1,0 +1,554 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Scaffold monorepo structure and shared TypeScript configuration": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715375748
+      },
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715395089
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716351386
+      }
+    ],
+    "2.1 Create `shared/src/types.ts` with all shared interfaces: `DocumentRecord`, `ChatRecord`, `Citation`, `ChunkMetadata`, `DocumentStatus` union type, `ApiResponse<T>`, `ErrorResponse`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376014
+      },
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715400547
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716355224
+      }
+    ],
+    "2.2 Create `shared/src/constants.ts` with string literals for DynamoDB key prefixes (`USER#`, `DOC#`, `CHAT#`), supported MIME types, max file size (20 971 520 bytes), default similarity threshold (0.5), chunk size (1000), overlap (200)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376109
+      },
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715405289
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716359329
+      }
+    ],
+    "3.1 Initialise `infra/` as a CDK TypeScript app (`cdk init app --language typescript`); configure `cdk.json`; add `infra/tsconfig.json` extending root": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376202
+      },
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715410896
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716668082
+      }
+    ],
+    "3.2 Create `infra/lib/docuquery-stack.ts` as the single CDK stack class; add CDK context parameters: `awsRegion`, `awsAccountId`, `allowedOrigins`, `environment` (dev/prod)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376329
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716676145
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716822928
+      }
+    ],
+    "3.3 Add CDK snapshot tests in `infra/test/docuquery-stack.test.ts` using `@aws-cdk/assertions`; assert that the stack synthesises without errors; add placeholder assertions for resource counts to be tightened in later tasks": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376380
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716682027
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716828127
+      }
+    ],
+    "4.1 Add `DocuQueryTable` to the CDK stack: `billingMode: PAY_PER_REQUEST`, `partitionKey: { name: 'PK', type: AttributeType.STRING }`, `sortKey: { name: 'SK', type: AttributeType.STRING }`, `encryption: TableEncryption.AWS_MANAGED`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376431
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716834647
+      }
+    ],
+    "4.2 Update CDK snapshot test: assert DynamoDB table has `SSESpecification.SSEEnabled: true`, has `BillingMode: PAY_PER_REQUEST`, and the GSI is present": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376479
+      }
+    ],
+    "5.1 Add `DocumentStoreBucket` to the CDK stack: `encryption: BucketEncryption.S3_MANAGED`, `blockPublicAccess: BlockPublicAccess.BLOCK_ALL`, `versioned: false`; configure CORS to allow PUT from Amplify origin": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376547
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716838826
+      }
+    ],
+    "5.2 Update CDK snapshot test: assert bucket has `BlockPublicAcls: true`, `BlockPublicPolicy: true`, and `ServerSideEncryptionConfiguration` with `AES256`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376623
+      }
+    ],
+    "6.1 Add `DocuQueryUserPool` to the CDK stack: self-service sign-up enabled; email verification required; password policy: min 8 chars, uppercase, lowercase, digit, symbol; account lockout: 5 failed attempts → 30-minute lock; token validity: access token 15 min, refresh token 7 days": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376700
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716843463
+      }
+    ],
+    "6.2 Add `DocuQueryIdentityPool` linked to the User Pool client": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376746
+      }
+    ],
+    "7.1 Configure `backend/` as a TypeScript project; add `esbuild` (or `tsc` + bundler script) to produce per-function bundles under `backend/dist/`; each function's entry point is `backend/src/{name}/handler.ts`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376796
+      },
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716847953
+      }
+    ],
+    "7.2 Create `backend/src/lib/logger.ts`: a structured JSON logger that emits a single CloudWatch log line per invocation containing `timestamp`, `functionName`, `userId`, `operationType`, `durationMs`, `outcome`, and optionally `correlationId` and `errorMessage`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376845
+      }
+    ],
+    "7.3 Create `backend/src/lib/errors.ts`: define `AppError` base class and typed subclasses (`ValidationError`, `NotFoundError`, `ForbiddenError`, `TimeoutError`); each carries an HTTP status code and `correlationId`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376893
+      }
+    ],
+    "7.4 Create `backend/src/lib/middleware.ts`: a thin wrapper that wraps Lambda handler functions with: correlation ID generation (UUID v4), structured logging on entry/exit, `try/catch` that maps `AppError` subclasses to correct HTTP responses and unknown errors to HTTP 500": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376938
+      }
+    ],
+    "8.1 Create `backend/src/upload-url/handler.ts`: validate `contentType` against allowed MIME types and `fileSizeBytes` ≤ 20 971 520; generate UUID `documentId`; construct S3 key `USER#{userId}/DOC#{documentId}/{sanitisedFileName}`; call `s3.getSignedUrl('putObject', ...)` with 15-minute expiry; write DynamoDB record (`PK=USER#{userId}`, `SK=DOC#{documentId}`, `status=uploaded`, `createdAt`, `fileName`, `fileSizeBytes`); return `{ uploadUrl, documentId, expiresIn: 900 }`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715376989
+      }
+    ],
+    "8.2 Add `upload-url-fn` to the CDK stack: `NodejsFunction`, runtime `NODEJS_20_X`, handler points to bundled artifact; create a dedicated IAM execution role with `s3:PutObject` scoped to `DocumentStoreBucket/{userId}/*` and `dynamodb:PutItem` scoped to `DocuQueryTable` ARN; attach CloudWatch log group with 30-day retention": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377032
+      }
+    ],
+    "8.3 Add API Gateway `POST /documents/upload-url` resource with Cognito JWT authorizer pointing to `upload-url-fn`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377075
+      }
+    ],
+    "9.1 Create `backend/src/ingest/extract.ts`: implement `extractText(s3Key, fileBytes, contentType)` — for TXT: decode UTF-8; for DOCX: use `mammoth` to extract plain text preserving paragraph newlines; for PDF: attempt pdf-parse text layer extraction, if result is empty string invoke Amazon Textract `StartDocumentTextDetection` and poll `GetDocumentTextDetection` until `SUCCEEDED`; return extracted string": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377127
+      }
+    ],
+    "9.2 Create `backend/src/ingest/chunker.ts`: implement `chunkText(text: string): string[]` using `js-tiktoken` with `cl100k_base` encoding; produce chunks of at most 1 000 tokens with 200-token overlap between consecutive chunks; return array of chunk strings": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377174
+      }
+    ],
+    "9.3 Create `backend/src/ingest/handler.ts`: parse `userId` and `documentId` from S3 object key; update DynamoDB `status = processing`; call `extractText`; if empty string → set `status = failed`, log to CloudWatch, return; call `chunkText`; for each chunk call Bedrock `InvokeModel` (Titan Embeddings V2) to generate embedding; store chunks via Bedrock KB `StartIngestionJob` with metadata `{ documentId, documentName, userId, pageNumber, chunkIndex, sourceFormat }`; update DynamoDB `status = ready`, `chunkCount`; on any error → call compensating rollback (KB `DeleteDocument` for this `documentId`), set `status = failed`, log with correlation ID; do not rethrow (retry count = 0)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377217
+      }
+    ],
+    "9.4 Add `ingest-fn` to the CDK stack: S3 event notification (`ObjectCreated`) on `DocumentStoreBucket` triggers `ingest-fn`; set `MaximumRetryAttempts: 0`; dedicated IAM role with `s3:GetObject` scoped to bucket, `dynamodb:UpdateItem` scoped to table, `bedrock:InvokeModel` scoped to Titan Embeddings model ARN, `bedrock:StartIngestionJob` + `bedrock:DeleteDocument` scoped to Knowledge Base ARN, `textract:StartDocumentTextDetection` + `textract:GetDocumentTextDetection`, CloudWatch log group 30-day retention": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377263
+      }
+    ],
+    "10.1 Create `backend/src/documents/handler.ts`:": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377309
+      }
+    ],
+    "10.2 Add `documents-fn` to the CDK stack with API Gateway routes `GET /documents`, `DELETE /documents/{documentId}`, `PATCH /documents/{documentId}/status`; dedicated IAM role scoped to `s3:DeleteObject` on bucket, `dynamodb:Query` + `dynamodb:DeleteItem` + `dynamodb:UpdateItem` on table, `bedrock:DeleteDocument` on KB ARN": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377419
+      }
+    ],
+    "11.1 Create `backend/src/query/handler.ts`:": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377461
+      }
+    ],
+    "11.2 Add `query-fn` to the CDK stack with API Gateway route `POST /query`; dedicated IAM role with `dynamodb:Query` + `dynamodb:PutItem` on table, `bedrock:InvokeModel` scoped to Titan and Claude model ARNs, `bedrock:Retrieve` scoped to KB ARN": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377516
+      }
+    ],
+    "12.1 Create `backend/src/history/handler.ts`: query DynamoDB `PK=USER#{userId}`, `SK begins_with CHAT#`, `ScanIndexForward=false`, `Limit=50`; map items to `ChatRecord[]`; if DynamoDB unavailable → return HTTP 500 (frontend handles gracefully)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377557
+      }
+    ],
+    "12.2 Add `history-fn` to the CDK stack with API Gateway route `GET /history`; dedicated IAM role with `dynamodb:Query` scoped to table ARN": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377603
+      }
+    ],
+    "13. Checkpoint — Backend Lambda unit tests passing": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377651
+      }
+    ],
+    "14.1 Initialise `frontend/` with Vite + React + TypeScript template; add `frontend/tsconfig.json` extending root; configure path aliases for `shared` types": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377710
+      }
+    ],
+    "14.2 Create `frontend/src/amplifyConfigure.ts`: read Cognito User Pool ID, App Client ID, API Gateway URL, and S3 bucket name from Vite env variables (`import.meta.env.VITE_*`); call `Amplify.configure(...)` — no secrets in source code": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377762
+      }
+    ],
+    "14.3 Create `frontend/src/components/ErrorBoundary.tsx`: class component that catches render errors and displays a user-friendly fallback; used as wrapper around all route-level components": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377810
+      }
+    ],
+    "14.4 Create `frontend/src/components/ProtectedRoute.tsx`: reads auth state from Amplify; redirects unauthenticated users to `/signin`; renders `<Outlet />` for authenticated users": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377857
+      }
+    ],
+    "15.1 Create `frontend/src/pages/SignUpPage.tsx`: registration form with email + password fields; client-side validation (RFC 5322 email, password complexity rules); calls `Auth.signUp`; on success navigates to `/verify`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377911
+      }
+    ],
+    "15.2 Create `frontend/src/pages/VerifyPage.tsx`: verification code input; calls `Auth.confirmSignUp`; on success navigates to `/signin`; handles expired/incorrect code error with a retry option; tracks resend attempts (max 3); calls `Auth.resendSignUp` for resend": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715377958
+      }
+    ],
+    "15.3 Create `frontend/src/pages/SignInPage.tsx`: sign-in form; calls `Auth.signIn`; on success navigates to `/`; displays generic \"Authentication failed\" message on wrong credentials (does not reveal which field is wrong); displays \"Account temporarily locked\" message on lockout error": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378008
+      }
+    ],
+    "15.4 Wire Amplify Hub to listen for `tokenRefresh` and `tokenRefresh_failure` events in `frontend/src/hooks/useAuthSession.ts`; on `tokenRefresh_failure` redirect to `/signin`; expose `signOut` handler that calls `Auth.signOut` and redirects to `/signin`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378068
+      }
+    ],
+    "15.5 Set up `frontend/src/App.tsx` with React Router v6 routes: `/signin`, `/signup`, `/verify`, and `/*` wrapped in `<ProtectedRoute>`; include `<ErrorBoundary>` at the root": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378157
+      }
+    ],
+    "16.1 Create `frontend/src/api/documentsApi.ts`: typed API client functions `requestUploadUrl`, `listDocuments`, `deleteDocument`, `patchDocumentStatus` — each attaches the Cognito JWT from `Auth.currentSession()` as `Authorization: Bearer {accessToken}`; handle 401 → redirect to `/signin`; handle network errors → throw `ConnectionError`": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378200
+      }
+    ],
+    "16.2 Create `frontend/src/components/UploadZone.tsx`: drag-and-drop and file-picker input; client-side validation — reject non-PDF/DOCX/TXT with an error message listing accepted formats; reject files > 20 MB with a size error message; on valid file call `requestUploadUrl` then upload directly via `XMLHttpRequest` to the pre-signed URL; fire `upload.onprogress` events to update a `0–100%` progress bar; on XHR success notify parent; on XHR failure call `patchDocumentStatus(documentId, 'failed')` and display error": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378245
+      }
+    ],
+    "16.3 Create `frontend/src/pages/DocumentsPage.tsx`: fetch document list on mount via `listDocuments`; poll every 3 seconds while any document has status `uploaded` or `processing`; display each document's name, upload timestamp, human-formatted file size (B/KB/MB/GB), and status badge; show \"Processing failed — please retry\" message for failed documents; delete button calls `deleteDocument` then removes the item from the list without full reload; display error message if delete fails": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378290
+      }
+    ],
+    "17.1 Create `frontend/src/api/queryApi.ts` and `frontend/src/api/historyApi.ts`: typed API client functions `sendQuery` and `getChatHistory`, each with JWT attachment and error handling (502 → retry message, 504 → timeout message, network error → connection error, 401 → redirect)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378334
+      }
+    ],
+    "17.2 Create `frontend/src/components/CitationPanel.tsx`: expandable panel (initially collapsed); props `citations: Citation[]`; renders numbered citation list showing `documentName` and `pageNumber`; clicking a citation expands to show full `passageText` without navigating away from chat view; fallback responses must not render the panel (conditional on `citations.length > 0`)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378380
+      }
+    ],
+    "17.3 Create `frontend/src/pages/ChatPage.tsx`: question input with submit button; on submit calls `sendQuery`; while waiting display loading indicator; on success render answer text and `<CitationPanel citations={response.citations} />`; on fallback response render fallback message prominently with no citation panel; on 504 display timeout retry message; on 502 display service error retry message; on network error display connection error without blank screen": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378433
+      }
+    ],
+    "17.4 Create `frontend/src/pages/HistoryPage.tsx`: on mount call `getChatHistory`; render up to 50 entries in reverse-chronological order; each entry shows question, answer, and `<CitationPanel>` with stored citations in same format as live answers; if history load fails display error message and keep chat interface functional": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378480
+      }
+    ],
+    "18. Checkpoint — Frontend compiles and auth flows connect to Cognito": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378526
+      }
+    ],
+    "19.1 Create `backend/test/properties/p1-txt-round-trip.test.ts`: use `fc.string()` as generator; assert `parse(serialize(parse(input))) === parse(input)` for the TXT extractor; annotate `// Feature: docuquery-rag-assistant, Property 1: TXT Round-Trip Fidelity`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378566
+      }
+    ],
+    "19.2 Create `backend/test/properties/p2-chunking-completeness.test.ts`: use `fc.string({ minLength: 1 })` as generator; tokenize input with `js-tiktoken cl100k_base`; assert that the multiset of all tokens in the chunks union equals the multiset of tokens in the input (accounting for 200-token overlap — tokens in overlap appear in two consecutive chunks); annotate `// Feature: docuquery-rag-assistant, Property 2: Chunking Completeness`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378611
+      }
+    ],
+    "19.3 Create `backend/test/properties/p3-chunking-size-bound.test.ts`: use `fc.string()` of varying lengths as generator; assert every chunk ≤ 1 000 tokens; assert consecutive chunk pairs share overlap of 200 ± 1 tokens; annotate `// Feature: docuquery-rag-assistant, Property 3: Chunking Size Bound`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378657
+      }
+    ],
+    "19.4 Create `backend/test/properties/p4-docx-paragraph-boundaries.test.ts`: use `fc.array(fc.string({ minLength: 1 }), { minLength: 2 })` for a list of paragraph strings; build an in-memory DOCX buffer using `docx` package; pass to `extractText`; assert extracted text contains `\\n` between each consecutive paragraph pair; annotate `// Feature: docuquery-rag-assistant, Property 4: DOCX Paragraph Boundary Preservation`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378699
+      }
+    ],
+    "19.5 Create `backend/test/properties/p10-ingestion-determinism.test.ts`: use `fc.uint8Array()` as generator for arbitrary TXT and DOCX byte inputs; call `extractText` twice on the same byte-identical input; assert both results are strictly equal; annotate `// Feature: docuquery-rag-assistant, Property 10: Ingestion Determinism`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378749
+      }
+    ],
+    "20.1 Create `backend/test/properties/p5-per-user-isolation.test.ts`: use `fc.uuid()` × 2 for `userA`/`userB`, `fc.record({ documentId: fc.uuid(), userId: fc.constant(userA) })` for a document; call the ownership-check function directly; assert that when `callerUserId !== document.userId` the result is HTTP 403 and no document data is included in the response; annotate `// Feature: docuquery-rag-assistant, Property 5: Per-User Data Isolation`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378803
+      }
+    ],
+    "20.2 Create `backend/test/properties/p6-fallback-threshold.test.ts`: use `fc.array(fc.float({ min: 0, max: 0.49 }), { minLength: 0, maxLength: 5 })` for chunk scores; mock Bedrock KB Retrieve to return chunks with those scores; mock Bedrock InvokeModel (Claude) to record if called; assert `isFallback === true`, `citations` is empty, and Claude mock was never invoked; annotate `// Feature: docuquery-rag-assistant, Property 6: Fallback When No Chunks Satisfy Threshold`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378847
+      }
+    ],
+    "20.3 Create `backend/test/properties/p7-citation-completeness.test.ts`: use `fc.array(fc.record({ documentId: fc.uuid(), documentName: fc.string({ minLength: 1 }), pageNumber: fc.oneof(fc.integer({ min: 1 }), fc.constant(null)), passageText: fc.string({ minLength: 1 }) }), { minLength: 1, maxLength: 5 })` for retrieved chunks with scores ≥ 0.5; assert `citations.length === chunks.length`; assert every citation has non-empty `documentName`, `passageText`, and `pageNumber` is either a positive integer or `'N/A'`; annotate `// Feature: docuquery-rag-assistant, Property 7: Citation Completeness for Non-Fallback Answers`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378893
+      }
+    ],
+    "20.4 Create `backend/test/properties/p8-status-monotonicity.test.ts`: use `fc.constantFrom` to enumerate all backward transitions (`ready → processing`, `ready → uploaded`, `failed → processing`, `failed → uploaded`, `processing → uploaded`); call the status-transition guard function with each invalid transition; assert all are rejected (throw or return false); assert all forward transitions (`uploaded → processing`, `processing → ready`, `processing → failed`, `uploaded → failed`) are accepted; annotate `// Feature: docuquery-rag-assistant, Property 8: Document Status Monotonicity`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378936
+      }
+    ],
+    "20.5 Create `backend/test/properties/p9-empty-input-rejection.test.ts`: pass empty string `\"\"` to `ingest-fn`'s post-extraction step; assert DynamoDB UpdateItem called with `status=failed`; assert Bedrock KB `StartIngestionJob` mock never called; annotate `// Feature: docuquery-rag-assistant, Property 9: Empty-Input Rejection`; 1 iteration (edge case)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715378985
+      }
+    ],
+    "20.6 Create `backend/test/properties/p11-prompt-instruction-inclusion.test.ts`: use `fc.string()` for question, `fc.array(fc.record({ content: fc.string({ minLength: 1 }), score: fc.float({ min: 0.5, max: 1.0 }) }), { minLength: 1, maxLength: 5 })` for chunks; call `buildPrompt(question, chunks)`; assert the returned system message string contains both required substrings: (a) \"answer only from the provided\" (or equivalent grounding instruction), (b) \"I could not find the answer in your documents\" (fallback instruction); annotate `// Feature: docuquery-rag-assistant, Property 11: Prompt System Instruction Inclusion`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379050
+      }
+    ],
+    "20.7 Create `backend/test/properties/p12-structured-log-completeness.test.ts`: use `fc.record({ functionName: fc.string({ minLength: 1 }), userId: fc.uuid(), operationType: fc.string({ minLength: 1 }), durationMs: fc.nat(), outcome: fc.oneof(fc.constant('success'), fc.string({ minLength: 1 })) })` for invocation parameters; call `logger.emit(params)`; parse the JSON output; assert all 6 required fields are present and non-empty (`timestamp`, `functionName`, `userId`, `operationType`, `durationMs`, `outcome`); annotate `// Feature: docuquery-rag-assistant, Property 12: Structured Log Completeness`; run ≥ 100 iterations": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379099
+      }
+    ],
+    "21.1 Update `infra/test/docuquery-stack.test.ts`: assert each Lambda execution role contains only explicit IAM actions (no `*`); assert each role's resource ARNs reference specific resource ARNs (no `*` in resource fields); assert `ingest-fn` S3 event source has `MaximumRetryAttempts: 0`; assert API Gateway Cognito authorizer is attached to all five routes": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379147
+      }
+    ],
+    "21.2 Update CDK snapshot test: assert all five Lambda log groups have `RetentionInDays: 30`; assert S3 CORS configuration restricts allowed origins to the `allowedOrigins` CDK parameter value": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379394
+      }
+    ],
+    "21.3 Add CDK stack parameterisation: add an `allowedOrigins` stack parameter read from CDK context; pass it to the S3 CORS rule and API Gateway CORS configuration so the same stack definition deploys to dev and prod without source-code changes": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379462
+      }
+    ],
+    "22.1 Add AWS Amplify app construct to the CDK stack: set the repository and branch (via CDK context parameters `repoUrl` and `branch`); configure build spec to run `npm ci && npm run build --workspace=frontend` and output `frontend/dist`; wire Amplify environment variables (`VITE_USER_POOL_ID`, `VITE_APP_CLIENT_ID`, `VITE_API_URL`, `VITE_BUCKET_NAME`) from CDK-resolved resource ARNs/URLs": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379524
+      }
+    ],
+    "22.2 Add CDK outputs for all values the frontend needs: `UserPoolId`, `UserPoolClientId`, `ApiGatewayUrl`, `DocumentBucketName`, `IdentityPoolId`; these outputs are used by the Amplify build environment and for local development `.env` files (which must never be committed)": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379583
+      }
+    ],
+    "23. Final checkpoint — all tests pass and stack synthesises": [
+      {
+        "executionId": "841fb73f-ba85-459d-b4e7-3302bf9dcc59",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791715379703
+      }
+    ],
+    "2. Define shared TypeScript types": [
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716359383
+      }
+    ],
+    "3. Set up CDK application skeleton and core stack": [
+      {
+        "executionId": "0aa1ef9e-06c9-46c6-9583-b7ca3a628d14",
+        "chatSessionId": "sess_f601069a-4d38-4850-981b-da7caefcac8b",
+        "timestamp": 1791716828182
+      }
+    ]
+  }
+}

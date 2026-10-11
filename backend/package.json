@@ -1,0 +1,43 @@
+{
+  "name": "@docuquery/backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AWS Lambda handler functions for DocuQuery",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@docuquery/shared": "*"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-bedrock-agent": "3.637.0",
+    "@aws-sdk/client-bedrock-agent-runtime": "3.637.0",
+    "@aws-sdk/client-bedrock-runtime": "3.637.0",
+    "@aws-sdk/client-dynamodb": "3.637.0",
+    "@aws-sdk/client-s3": "3.637.0",
+    "@aws-sdk/client-textract": "3.637.0",
+    "@aws-sdk/lib-dynamodb": "3.637.0",
+    "@aws-sdk/s3-request-presigner": "3.637.0",
+    "@aws-sdk/util-dynamodb": "3.637.0",
+    "@types/aws-lambda": "8.10.145",
+    "@types/jest": "29.5.12",
+    "@types/node": "20.16.1",
+    "@types/uuid": "10.0.0",
+    "aws-lambda": "1.0.7",
+    "aws-sdk-client-mock": "4.0.2",
+    "aws-sdk-client-mock-jest": "4.0.2",
+    "esbuild": "0.23.1",
+    "fast-check": "3.22.0",
+    "jest": "29.7.0",
+    "mammoth": "1.8.0",
+    "ts-jest": "29.2.4",
+    "typescript": "5.5.4",
+    "uuid": "10.0.0"
+  }
+}

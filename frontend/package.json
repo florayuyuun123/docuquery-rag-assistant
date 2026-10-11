@@ -1,0 +1,29 @@
+{
+  "name": "@docuquery/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "React TypeScript SPA for DocuQuery, hosted on AWS Amplify",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@docuquery/shared": "*",
+    "aws-amplify": "6.5.0",
+    "@aws-amplify/ui-react": "6.3.0",
+    "axios": "1.7.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.26.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.4",
+    "@types/react-dom": "18.3.0",
+    "@vitejs/plugin-react": "4.3.1",
+    "vite": "5.4.2"
+  }
+}
