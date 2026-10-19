@@ -1,23 +1,27 @@
 # .github/workflows/deploy.yml
 #
-# Full CD pipeline — triggers on every push to main.
+# CD pipeline — triggers on every push to main.
 #
-# Pipeline stages:
-#   1. ci         Run all tests and build checks (reuses ci.yml logic)
-#   2. bootstrap  CDK bootstrap (idempotent — safe every run)
-#   3. deploy-1   CDK deploy pass 1: create all AWS resources (no KB ID yet)
-#   4. setup-kb   Provision AOSS collection + Bedrock KB (idempotent Python script)
-#   5. deploy-2   CDK deploy pass 2: wire KB ID into Lambda env + IAM policies
-#   6. amplify    Trigger Amplify branch build so frontend picks up new API URL
+# What this does on EVERY push:
+#   1. CI gate        lint + tests + frontend build (fail fast)
+#   2. Connect        wire Amplify <-> GitHub once (idempotent — skipped if already connected)
+#   3. CDK deploy     update Lambda/IAM/infra if changed (idempotent — no-op if nothing changed)
+#   4. Amplify build  Amplify builds & deploys the frontend automatically via its webhook
+#
+# After the first successful run, step 2 is a no-op (already connected) and
+# Amplify handles step 4 natively on every push — GitHub Actions just monitors it.
 #
 # Required GitHub secrets (Settings -> Secrets -> Actions):
-#   AWS_ACCESS_KEY_ID      IAM user access key (needs AdministratorAccess or custom policy)
-#   AWS_SECRET_ACCESS_KEY  Matching secret key
-#   AWS_ACCOUNT_ID         800445863339
+#   AWS_ACCESS_KEY_ID       IAM access key for flotech-demo-account
+#   AWS_SECRET_ACCESS_KEY   Matching secret key
+#   AWS_ACCOUNT_ID          800445863339
+#   GITHUB_PAT              GitHub Personal Access Token (classic, repo scope)
+#                           Create at: https://github.com/settings/tokens
+#                           Needed once to connect Amplify to the GitHub repo.
 #
 # Optional GitHub variables (Settings -> Variables -> Actions):
-#   ENVIRONMENT            dev (default)
-#   AWS_REGION             us-east-1 (default)
+#   ENVIRONMENT   dev        (default)
+#   AWS_REGION    us-east-1  (default)
 
 name: Deploy
 
@@ -27,17 +31,20 @@ on:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false   # never cancel a running deploy mid-flight
+  cancel-in-progress: false
 
 env:
-  NODE_VERSION: "20"
-  AWS_REGION:   ${{ vars.AWS_REGION || 'us-east-1' }}
-  ENVIRONMENT:  ${{ vars.ENVIRONMENT || 'dev' }}
+  NODE_VERSION:    "20"
+  AWS_REGION:      ${{ vars.AWS_REGION || 'us-east-1' }}
+  ENVIRONMENT:     ${{ vars.ENVIRONMENT || 'dev' }}
+  AMPLIFY_APP_ID:  d3m1ddehppkb04
+  REPO_URL:        https://github.com/florayuyuun123/docuquery-rag-assistant
+  BRANCH:          main
 
 jobs:
   # ── 1. CI gate ─────────────────────────────────────────────────────────────
   ci:
-    name: CI Gate (lint + test + build)
+    name: CI Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,43 +80,64 @@ jobs:
           VITE_API_URL:               https://placeholder.execute-api.us-east-1.amazonaws.com/dev/
           VITE_DOCUMENT_BUCKET_NAME:  placeholder-bucket
 
-  # ── 2. CDK bootstrap ───────────────────────────────────────────────────────
-  bootstrap:
-    name: CDK Bootstrap
+  # ── 2. Connect Amplify to GitHub (idempotent) ──────────────────────────────
+  connect-amplify:
+    name: Connect Amplify to GitHub
     runs-on: ubuntu-latest
     needs: ci
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: CDK bootstrap (idempotent)
-        working-directory: infra
+      - name: Wire GitHub repo to Amplify app (idempotent)
         run: |
-          npx cdk bootstrap \
-            aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.AWS_REGION }}
+          # Check if repo is already connected
+          CURRENT_REPO=$(aws amplify get-app \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query 'app.repository' --output text)
 
-  # ── 3. CDK deploy pass 1 — provision all infrastructure ───────────────────
+          if [ "$CURRENT_REPO" = "$REPO_URL" ]; then
+            echo "Amplify already connected to $REPO_URL — skipping."
+          else
+            echo "Connecting Amplify to $REPO_URL ..."
+            aws amplify update-app \
+              --app-id "$AMPLIFY_APP_ID" \
+              --repository "$REPO_URL" \
+              --access-token "${{ secrets.GITHUB_PAT }}" \
+              --enable-branch-auto-build \
+              --enable-branch-auto-deletion
+            echo "Amplify app updated."
+          fi
+
+      - name: Create/verify main branch in Amplify (idempotent)
+        run: |
+          # Check if branch already exists
+          BRANCH_EXISTS=$(aws amplify list-branches \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query "branches[?branchName=='$BRANCH'].branchName" \
+            --output text)
+
+          if [ -n "$BRANCH_EXISTS" ]; then
+            echo "Branch '$BRANCH' already connected — skipping."
+          else
+            echo "Creating branch '$BRANCH' in Amplify..."
+            aws amplify create-branch \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name "$BRANCH" \
+              --enable-auto-build \
+              --framework "React" \
+              --stage PRODUCTION
+            echo "Branch created."
+          fi
+
+  # ── 3. CDK deploy (infra changes only) ────────────────────────────────────
   deploy-infra:
-    name: CDK Deploy (pass 1 — infrastructure)
+    name: CDK Deploy
     runs-on: ubuntu-latest
-    needs: bootstrap
-    outputs:
-      bucket_name: ${{ steps.outputs.outputs.bucket_name }}
-      api_url:     ${{ steps.outputs.outputs.api_url }}
-      amplify_app_id: ${{ steps.outputs.outputs.amplify_app_id }}
+    needs: connect-amplify
     steps:
       - uses: actions/checkout@v4
 
@@ -130,6 +158,8 @@ jobs:
       - name: Build shared package
         run: npm run build --workspace=shared
 
+      # KB ID is already known — no two-pass deploy needed since infra is live.
+      # CDK detects no changes and completes in ~15 seconds when nothing changed.
       - name: CDK deploy
         working-directory: infra
         run: |
@@ -138,102 +168,17 @@ jobs:
             --context environment=${{ env.ENVIRONMENT }} \
             --context awsRegion=${{ env.AWS_REGION }} \
             --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
-            --outputs-file ../cdk-outputs.json
+            --context knowledgeBaseId=LPLGCWRHOM \
+            --context repoUrl=${{ env.REPO_URL }} \
+            --context branch=${{ env.BRANCH }}
 
-      - name: Parse CDK outputs
-        id: outputs
-        run: |
-          BUCKET=$(jq -r '.DocuQueryStack.DocumentBucketName' cdk-outputs.json)
-          API=$(jq -r '.DocuQueryStack.ApiGatewayUrl' cdk-outputs.json)
-          AMPLIFY=$(jq -r '.DocuQueryStack.AmplifyAppId' cdk-outputs.json)
-          echo "bucket_name=$BUCKET" >> $GITHUB_OUTPUT
-          echo "api_url=$API"        >> $GITHUB_OUTPUT
-          echo "amplify_app_id=$AMPLIFY" >> $GITHUB_OUTPUT
-          echo "Bucket: $BUCKET"
-          echo "API URL: $API"
-          echo "Amplify App: $AMPLIFY"
-
-      - name: Upload CDK outputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: cdk-outputs
-          path: cdk-outputs.json
-          retention-days: 1
-
-  # ── 4. Provision AOSS + Bedrock Knowledge Base ─────────────────────────────
-  setup-kb:
-    name: Provision AOSS + Knowledge Base
+  # ── 4. Monitor Amplify build ───────────────────────────────────────────────
+  # After connect-amplify wires the repo, Amplify triggers its own build
+  # automatically on every push via GitHub webhook. This job just monitors it.
+  monitor-amplify:
+    name: Monitor Amplify Build
     runs-on: ubuntu-latest
-    needs: deploy-infra
-    outputs:
-      kb_id: ${{ steps.kb.outputs.KB_ID }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install Python dependencies
-        run: pip install boto3 requests
-
-      - name: Run KB setup script
-        id: kb
-        env:
-          AWS_REGION:      ${{ env.AWS_REGION }}
-          AWS_ACCOUNT_ID:  ${{ secrets.AWS_ACCOUNT_ID }}
-          ENVIRONMENT:     ${{ env.ENVIRONMENT }}
-          BUCKET_NAME:     ${{ needs.deploy-infra.outputs.bucket_name }}
-        run: python infra/scripts/setup_kb.py
-
-  # ── 5. CDK deploy pass 2 — wire KB ID into Lambda env + IAM ───────────────
-  deploy-with-kb:
-    name: CDK Deploy (pass 2 — wire Knowledge Base)
-    runs-on: ubuntu-latest
-    needs: [deploy-infra, setup-kb]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared package
-        run: npm run build --workspace=shared
-
-      - name: CDK deploy with KB ID
-        working-directory: infra
-        run: |
-          npx cdk deploy \
-            --require-approval never \
-            --context environment=${{ env.ENVIRONMENT }} \
-            --context awsRegion=${{ env.AWS_REGION }} \
-            --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
-            --context knowledgeBaseId=${{ needs.setup-kb.outputs.kb_id }}
-
-  # ── 6. Trigger Amplify build ───────────────────────────────────────────────
-  amplify-deploy:
-    name: Trigger Amplify Build
-    runs-on: ubuntu-latest
-    needs: [deploy-infra, deploy-with-kb]
+    needs: [connect-amplify, deploy-infra]
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -241,36 +186,63 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Start Amplify job
-        env:
-          AMPLIFY_APP_ID: ${{ needs.deploy-infra.outputs.amplify_app_id }}
+      - name: Wait for Amplify build to complete
         run: |
-          # Start a build on the main branch
-          JOB=$(aws amplify start-job \
-            --app-id "$AMPLIFY_APP_ID" \
-            --branch-name main \
-            --job-type RELEASE \
-            --query 'jobSummary.jobId' \
-            --output text)
-          echo "Amplify job started: $JOB"
+          echo "Waiting for Amplify to start a build for commit $GITHUB_SHA ..."
+          sleep 30  # give Amplify time to pick up the push webhook
 
-          # Poll until SUCCEED or FAILED (max 10 min)
-          for i in $(seq 1 30); do
-            STATUS=$(aws amplify get-job \
+          # Find the latest job for the branch
+          for attempt in $(seq 1 3); do
+            JOB_ID=$(aws amplify list-jobs \
               --app-id "$AMPLIFY_APP_ID" \
-              --branch-name main \
-              --job-id "$JOB" \
-              --query 'job.summary.status' \
-              --output text)
-            echo "  [$i/30] Amplify status: $STATUS"
-            if [ "$STATUS" = "SUCCEED" ]; then
-              echo "Amplify build succeeded."
-              exit 0
-            elif [ "$STATUS" = "FAILED" ]; then
-              echo "Amplify build FAILED."
-              exit 1
+              --branch-name "$BRANCH" \
+              --max-results 1 \
+              --query 'jobSummaries[0].jobId' \
+              --output text 2>/dev/null || echo "")
+            if [ -n "$JOB_ID" ] && [ "$JOB_ID" != "None" ]; then
+              break
             fi
+            echo "No job yet, waiting 20s..."
             sleep 20
           done
-          echo "Amplify build timed out after 10 minutes."
+
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "None" ]; then
+            echo "No Amplify build found — triggering manually..."
+            JOB_ID=$(aws amplify start-job \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name "$BRANCH" \
+              --job-type RELEASE \
+              --query 'jobSummary.jobId' \
+              --output text)
+            echo "Started job: $JOB_ID"
+          else
+            echo "Found Amplify job: $JOB_ID"
+          fi
+
+          # Poll until SUCCEED or FAILED (max 15 min)
+          for i in $(seq 1 45); do
+            STATUS=$(aws amplify get-job \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name "$BRANCH" \
+              --job-id "$JOB_ID" \
+              --query 'job.summary.status' \
+              --output text)
+            echo "  [$i/45] Amplify status: $STATUS"
+            case "$STATUS" in
+              SUCCEED)
+                APP_URL=$(aws amplify get-branch \
+                  --app-id "$AMPLIFY_APP_ID" \
+                  --branch-name "$BRANCH" \
+                  --query 'branch.displayName' \
+                  --output text 2>/dev/null || echo "")
+                echo "Amplify build succeeded."
+                echo "App URL: https://${BRANCH}.${AMPLIFY_APP_ID}.amplifyapp.com"
+                exit 0 ;;
+              FAILED|CANCELLED)
+                echo "Amplify build $STATUS."
+                exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "Amplify build timed out."
           exit 1

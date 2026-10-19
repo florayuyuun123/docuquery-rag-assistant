@@ -783,92 +783,70 @@ The property-based tests use **fast-check** to verify 12 correctness properties:
 
 ## CI/CD Pipeline
 
-Every push to `main` runs a fully automated deploy — no manual AWS console steps, no local `cdk deploy`, no manual KB setup. Two workflow files handle this:
+Every push to `main` automatically lints, tests, deploys infra changes, and builds the frontend via Amplify. No manual AWS console steps required.
 
-| File | Trigger | Purpose |
-|------|---------|---------|
-| `.github/workflows/ci.yml` | Pull requests to `main` | Lint, test, build, synth gate |
-| `.github/workflows/deploy.yml` | Push to `main` | Full end-to-end deploy |
-
-### Deploy pipeline stages
+### How it works
 
 ```
 push to main
-     │
-     ▼
-[1] CI Gate ─────────── lint + all tests + frontend build + cdk synth
-     │
-     ▼
-[2] CDK Bootstrap ────── idempotent, safe to run on every push
-     │
-     ▼
-[3] CDK Deploy (pass 1) ─ creates all infrastructure (no KB ID yet)
-     │                     outputs: bucket name, API URL, Amplify App ID
-     ▼
-[4] Setup KB ────────────  Python script (infra/scripts/setup_kb.py)
-     │                     idempotent: creates AOSS collection, vector index,
-     │                     Bedrock KB, S3 data source — skips if already exists
-     │                     outputs: KB_ID
-     ▼
-[5] CDK Deploy (pass 2) ─ wires KB_ID into Lambda env vars + IAM policies
-     │
-     ▼
-[6] Amplify Build ───────  starts an Amplify release job, polls until SUCCEED
-                           frontend picks up all new API URLs automatically
+     |
+     v
+[1] CI Gate ────────── lint + all tests + frontend typecheck + build
+     |
+     v
+[2] Connect Amplify ── wires GitHub repo to Amplify app once (idempotent — no-op after first run)
+     |                 creates the main branch in Amplify with auto-build enabled
+     v
+[3] CDK Deploy ──────── applies any infra changes (Lambda code, IAM, env vars)
+     |                  no-op in ~15 s when nothing changed
+     v
+[4] Monitor Amplify ─── waits for Amplify's automatic build to complete
+                        Amplify triggers itself via GitHub webhook on every push
+                        falls back to a manual trigger if the webhook fires late
 ```
 
-The two-pass CDK deploy is required because the Knowledge Base ID isn't known until
-step 4 — you can't create the KB before the S3 bucket exists (step 3).
+After the first run, step 2 is always a no-op — Amplify is already wired. Steps 3 and 4
+are the only meaningful work on subsequent pushes.
 
-### One-time setup: GitHub secrets and variables
+### One-time setup: add GitHub secrets
 
-Go to your repository: **Settings → Secrets and variables → Actions**
+Go to **Settings → Secrets and variables → Actions** in the repository.
 
-**Secrets** (encrypted, never visible after saving):
+**Secrets:**
 
-| Name | Value |
-|------|-------|
-| `AWS_ACCESS_KEY_ID` | Access key ID for IAM user `flotech-demo-account` |
-| `AWS_SECRET_ACCESS_KEY` | Secret access key for the same user |
-| `AWS_ACCOUNT_ID` | `800445863339` |
+| Name | Value | Where to get it |
+|------|-------|----------------|
+| `AWS_ACCESS_KEY_ID` | IAM access key ID | AWS Console → IAM → Users → `flotech-demo-account` → Security credentials |
+| `AWS_SECRET_ACCESS_KEY` | Secret access key | Same — create new access key if needed |
+| `AWS_ACCOUNT_ID` | `800445863339` | Fixed |
+| `GITHUB_PAT` | GitHub Personal Access Token | [github.com/settings/tokens](https://github.com/settings/tokens) → Generate new token (classic) → tick `repo` scope |
 
-**Variables** (plaintext, visible in logs):
+> **GITHUB_PAT** is only used in the `connect-amplify` step to authorise the one-time
+> Amplify ↔ GitHub OAuth handshake. After the connection is established it is never used
+> again. It can be a fine-grained PAT scoped to just this repository with
+> `contents: read` and `webhooks: write` permissions if you prefer tighter scoping.
 
-| Name | Value |
-|------|-------|
+**Optional variables** (Settings → Variables → Actions):
+
+| Name | Default |
+|------|---------|
 | `ENVIRONMENT` | `dev` |
 | `AWS_REGION` | `us-east-1` |
 
-The IAM user needs `AdministratorAccess` (or a custom policy covering CDK, Lambda, API GW, Cognito, S3, DynamoDB, Bedrock, AOSS, Amplify, IAM, CloudFormation).
+### After adding the secrets
 
-### What the `setup_kb.py` script does
+Push any commit to `main`. On the first run:
 
-`infra/scripts/setup_kb.py` runs as part of step 4. It is **fully idempotent** — every
-operation checks whether the resource already exists before creating it:
+1. `connect-amplify` links `https://github.com/florayuyuun123/docuquery-rag-assistant` to Amplify app `d3m1ddehppkb04` and creates the `main` branch with auto-build enabled
+2. Amplify installs the GitHub webhook automatically — all future pushes trigger builds without GitHub Actions involvement
+3. The frontend is live at `https://main.d3m1ddehppkb04.amplifyapp.com`
 
-1. IAM role `docuquery-kb-role` (S3 + Bedrock embedding + AOSS permissions)
-2. AOSS encryption + network security policies
-3. AOSS `VECTORSEARCH` collection `docuquery-vectors` — waits for `ACTIVE`
-4. AOSS data access policy (grants KB role + GitHub Actions role index access)
-5. Vector index `docuquery-index` (1024-dim, HNSW/faiss) via signed HTTP PUT
-6. Bedrock Knowledge Base `docuquery-dev`
-7. S3 data source pointing at the CDK-created document bucket
-
-On subsequent deploys (e.g. a code change) the script detects all resources exist and
-completes in under 5 seconds.
-
-### Verify the pipeline
-
-After adding the secrets, push any commit to `main`:
-
+Track the run at:
 ```
 https://github.com/florayuyuun123/docuquery-rag-assistant/actions
 ```
 
-You should see the `Deploy` workflow run through all 6 stages in ~10 minutes total
-(most of the time is the AOSS collection creation on first run, which takes ~3 minutes).
-
-### Running CI locally (before pushing)
+### Running CI locally before pushing
 
 ```bash
 npm ci
@@ -880,15 +858,6 @@ npm test --workspace=backend
 npm test --workspace=infra
 npm run typecheck --workspace=frontend
 npm run build --workspace=frontend
-
-cd infra
-npx cdk synth \
-  --profile flotech-demo-account \
-  --context environment=dev \
-  --context awsRegion=us-east-1 \
-  --context awsAccountId=800445863339 \
-  --context knowledgeBaseId=PLACEHOLDER \
-  --quiet
 ```
 
 ---
