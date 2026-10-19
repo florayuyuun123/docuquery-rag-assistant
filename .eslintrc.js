@@ -5,6 +5,10 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
+    // project: true tells the parser to find each file's nearest tsconfig.json
+    // automatically — required for type-aware rules in a monorepo.
+    project: true,
+    tsconfigRootDir: __dirname,
   },
   plugins: ['@typescript-eslint', 'import'],
   extends: [
