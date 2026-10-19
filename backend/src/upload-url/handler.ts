@@ -10,13 +10,12 @@
  * Satisfies Requirements 3.1, 3.2, 3.5, 3.6, 3.10, 10.4.
  */
 
-import { APIGatewayProxyResult } from 'aws-lambda';
-import { S3Client } from '@aws-sdk/client-s3';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { randomUUID } from 'crypto';
+
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client , PutObjectCommand } from '@aws-sdk/client-s3';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   USER_PREFIX,
   DOC_PREFIX,
@@ -24,6 +23,8 @@ import {
   MAX_FILE_SIZE_BYTES,
   PRESIGNED_URL_EXPIRY_SECONDS,
 } from '@docuquery/shared';
+import { APIGatewayProxyResult } from 'aws-lambda';
+
 import { ValidationError } from '../lib/errors.js';
 import { withMiddleware } from '../lib/middleware.js';
 
@@ -41,7 +42,8 @@ interface UploadUrlRequestBody {
 
 export const handler = withMiddleware('upload-url-fn', async (event, _context, correlationId): Promise<APIGatewayProxyResult> => {
   // Extract userId from Cognito authorizer claims
-  const userId = event.requestContext?.authorizer?.claims?.sub as string | undefined;
+  const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
+  const userId = claims?.['sub'];
   if (!userId) {
     throw new ValidationError('Missing userId in authorizer claims', correlationId);
   }

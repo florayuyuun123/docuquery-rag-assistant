@@ -95,7 +95,7 @@ export async function extractText(
   if (contentType === 'application/pdf') {
     try {
       // Use require() to avoid ESM/CJS interop issues with pdf-parse
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const pdfParse = require('pdf-parse') as (buffer: Buffer) => Promise<{ text: string }>;
       const data = await pdfParse(fileBytes);
       const extracted = data.text.trim();

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+
 import { listDocuments, deleteDocument, DocumentSummary } from '../api/documentsApi';
 import { UploadZone } from '../components/UploadZone';
 import { useAuthSession } from '../hooks/useAuthSession';
-import { Link } from 'react-router-dom';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

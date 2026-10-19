@@ -1,6 +1,7 @@
-import axios from 'axios';
-import { getAuthToken } from './authApi';
 import type { Citation } from '@docuquery/shared';
+import axios, { type AxiosResponse } from 'axios';
+
+import { getAuthToken } from './authApi';
 
 const API_URL = import.meta.env.VITE_API_URL as string;
 
@@ -18,5 +19,5 @@ export async function sendQuery(question: string, sessionId?: string): Promise<Q
     { question, sessionId },
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  return res.data.data as QueryResponse;
+  return (res as AxiosResponse<{ data: QueryResponse }>).data.data;
 }

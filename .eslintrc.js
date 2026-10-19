@@ -5,8 +5,8 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
-    // project: true tells the parser to find each file's nearest tsconfig.json
-    // automatically — required for type-aware rules in a monorepo.
+    // project: true finds each file's nearest tsconfig.json automatically.
+    // Required for type-aware rules (no-floating-promises etc.) in a monorepo.
     project: true,
     tsconfigRootDir: __dirname,
   },
@@ -16,7 +16,6 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'plugin:import/recommended',
-    'plugin:import/typescript',
     'prettier',
   ],
   rules: {
@@ -33,7 +32,8 @@ module.exports = {
     '@typescript-eslint/no-unsafe-call': 'error',
     '@typescript-eslint/no-unsafe-return': 'error',
 
-    // Imports
+    // Imports — no-unresolved is off because TypeScript handles it.
+    // No eslint-import-resolver-typescript needed.
     'import/order': [
       'error',
       {
@@ -43,20 +43,13 @@ module.exports = {
       },
     ],
     'import/no-duplicates': 'error',
-    'import/no-unresolved': 'off', // handled by TypeScript
+    'import/no-unresolved': 'off',
 
     // General
     'no-console': 'warn',
     'prefer-const': 'error',
     'no-var': 'error',
     eqeqeq: ['error', 'always'],
-  },
-  settings: {
-    'import/resolver': {
-      typescript: {
-        alwaysTryTypes: true,
-      },
-    },
   },
   ignorePatterns: [
     'node_modules/',

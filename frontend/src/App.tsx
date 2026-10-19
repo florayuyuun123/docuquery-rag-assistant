@@ -1,12 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ChatPage } from './pages/ChatPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { SignInPage } from './pages/SignInPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { VerifyPage } from './pages/VerifyPage';
-import { DocumentsPage } from './pages/DocumentsPage';
-import { ChatPage } from './pages/ChatPage';
-import { HistoryPage } from './pages/HistoryPage';
 
 export function App(): JSX.Element {
   return (

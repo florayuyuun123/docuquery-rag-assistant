@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
+
 import { useAuthSession } from '../hooks/useAuthSession';
 
 export function ProtectedRoute(): JSX.Element {

@@ -9,7 +9,6 @@
  * Satisfies Requirements 9.1–9.5.
  */
 
-import { APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import {
@@ -17,6 +16,8 @@ import {
   CHAT_PREFIX,
   MAX_CHAT_HISTORY_RECORDS,
 } from '@docuquery/shared';
+import { APIGatewayProxyResult } from 'aws-lambda';
+
 import { ValidationError } from '../lib/errors.js';
 import { withMiddleware } from '../lib/middleware.js';
 
@@ -25,7 +26,8 @@ const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = process.env['TABLE_NAME'] ?? '';
 
 export const handler = withMiddleware('history-fn', async (event, _context, correlationId): Promise<APIGatewayProxyResult> => {
-  const userId = event.requestContext?.authorizer?.claims?.sub as string | undefined;
+  const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
+  const userId = claims?.['sub'];
   if (!userId) {
     throw new ValidationError('Missing userId in authorizer claims', correlationId);
   }

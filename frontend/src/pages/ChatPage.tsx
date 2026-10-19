@@ -1,7 +1,8 @@
 import { useState, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+
 import { sendQuery, QueryResponse } from '../api/queryApi';
 import { CitationPanel } from '../components/CitationPanel';
-import { Link } from 'react-router-dom';
 import { useAuthSession } from '../hooks/useAuthSession';
 
 export function ChatPage(): JSX.Element {
@@ -48,7 +49,7 @@ export function ChatPage(): JSX.Element {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: '1.5rem' }}>
+      <form onSubmit={(e) => { void handleSubmit(e); }} style={{ marginBottom: '1.5rem' }}>
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}

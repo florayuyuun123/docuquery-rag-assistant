@@ -4,25 +4,26 @@
  * Validates Requirements 4.1–4.10
  */
 
-import { mockClient } from 'aws-sdk-client-mock';
-import 'aws-sdk-client-mock-jest';
+import { Readable } from 'stream';
+
+import {
+  BedrockAgentClient,
+  StartIngestionJobCommand,
+} from '@aws-sdk/client-bedrock-agent';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import {
   DynamoDBDocumentClient,
   UpdateCommand,
   GetCommand,
 } from '@aws-sdk/lib-dynamodb';
-import {
-  BedrockAgentClient,
-  StartIngestionJobCommand,
-} from '@aws-sdk/client-bedrock-agent';
-import { Readable } from 'stream';
+import { CHUNK_SIZE_TOKENS } from '@docuquery/shared';
+import { S3Event } from 'aws-lambda';
+import { mockClient } from 'aws-sdk-client-mock';
+import 'aws-sdk-client-mock-jest';
 
-import { handler } from '../../src/ingest/handler';
 import { chunkText } from '../../src/ingest/chunker';
 import { extractText } from '../../src/ingest/extract';
-import { S3Event } from 'aws-lambda';
-import { CHUNK_SIZE_TOKENS } from '@docuquery/shared';
+import { handler } from '../../src/ingest/handler';
 
 // ── AWS SDK mocks ────────────────────────────────────────────────────────────
 const s3Mock = mockClient(S3Client);
@@ -32,6 +33,7 @@ const bedrockAgentMock = mockClient(BedrockAgentClient);
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function bufferToAsyncIterable(buf: Buffer): AsyncIterable<Uint8Array> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return Readable.from([buf]) as unknown as AsyncIterable<Uint8Array>;
 }
 
@@ -115,6 +117,7 @@ describe('chunkText()', () => {
   });
 
   it('5. every chunk has at most CHUNK_SIZE_TOKENS tokens', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { get_encoding } = require('tiktoken') as typeof import('tiktoken');
     const enc = get_encoding('cl100k_base');
     const longText = Array.from({ length: 2000 }, (_, i) => `token${i}`).join(' ');
@@ -194,7 +197,8 @@ describe('ingest handler', () => {
     });
 
     s3Mock.on(GetObjectCommand).resolves({
-      Body: bufferToAsyncIterable(fileBuffer) as never,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      Body: bufferToAsyncIterable(fileBuffer) as unknown as import('@aws-sdk/client-s3').GetObjectCommandOutput['Body'],
     });
 
     const event = buildS3Event(BUCKET, S3_KEY);
@@ -204,7 +208,9 @@ describe('ingest handler', () => {
     const updateCalls = dynamoMock.commandCalls(UpdateCommand);
     expect(updateCalls.length).toBeGreaterThanOrEqual(2);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const statusValues = updateCalls.map(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'],
     );
     expect(statusValues).toContain('processing');
@@ -239,14 +245,17 @@ describe('ingest handler', () => {
 
     // Return an empty file
     s3Mock.on(GetObjectCommand).resolves({
-      Body: bufferToAsyncIterable(Buffer.from('', 'utf-8')) as never,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      Body: bufferToAsyncIterable(Buffer.from('', 'utf-8')) as unknown as import('@aws-sdk/client-s3').GetObjectCommandOutput['Body'],
     });
 
     const event = buildS3Event(BUCKET, S3_KEY);
     await handler(event);
 
     const updateCalls = dynamoMock.commandCalls(UpdateCommand);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const statusValues = updateCalls.map(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'],
     );
     expect(statusValues).toContain('failed');
@@ -273,7 +282,9 @@ describe('ingest handler', () => {
     await expect(handler(event)).resolves.toBeUndefined();
 
     const updateCalls = dynamoMock.commandCalls(UpdateCommand);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const statusValues = updateCalls.map(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'],
     );
     expect(statusValues).toContain('failed');

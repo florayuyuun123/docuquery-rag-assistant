@@ -7,8 +7,8 @@
  * Satisfies Requirements 4.5, 14.1.
  */
 
-import { get_encoding } from 'tiktoken';
 import { CHUNK_SIZE_TOKENS, CHUNK_OVERLAP_TOKENS } from '@docuquery/shared';
+import { get_encoding } from 'tiktoken';
 
 /**
  * Split `text` into chunks of at most `CHUNK_SIZE_TOKENS` tokens, with

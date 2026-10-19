@@ -9,18 +9,21 @@
  * Satisfies Requirements 4.1–4.10.
  */
 
-import { S3Event } from 'aws-lambda';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import {
   BedrockAgentClient,
   StartIngestionJobCommand,
 } from '@aws-sdk/client-bedrock-agent';
-import { createLogger } from '../lib/logger.js';
-import { extractText } from './extract.js';
-import { chunkText } from './chunker.js';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { USER_PREFIX, DOC_PREFIX } from '@docuquery/shared';
+import { S3Event } from 'aws-lambda';
+
+import { createLogger } from '../lib/logger.js';
+
+import { chunkText } from './chunker.js';
+import { extractText } from './extract.js';
+
 
 const s3 = new S3Client({});
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}));

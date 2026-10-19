@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
+
 import { getAuthToken } from './authApi';
 
 const API_URL = import.meta.env.VITE_API_URL as string;
@@ -24,7 +25,7 @@ export async function requestUploadUrl(
     { fileName, contentType, fileSize },
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  return res.data.data as { presignedUrl: string; documentId: string };
+  return (res as AxiosResponse<{ data: { presignedUrl: string; documentId: string } }>).data.data;
 }
 
 export async function listDocuments(): Promise<DocumentSummary[]> {
@@ -32,7 +33,7 @@ export async function listDocuments(): Promise<DocumentSummary[]> {
   const res = await axios.get(`${API_URL}/documents`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return (res.data.data?.documents ?? []) as DocumentSummary[];
+  return ((res as AxiosResponse<{ data: { documents?: DocumentSummary[] } }>).data.data?.documents ?? []);
 }
 
 export async function deleteDocument(documentId: string): Promise<void> {

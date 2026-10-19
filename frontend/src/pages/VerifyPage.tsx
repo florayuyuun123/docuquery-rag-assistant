@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react';
 import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
+import { useState, FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export function VerifyPage(): JSX.Element {
@@ -46,7 +46,7 @@ export function VerifyPage(): JSX.Element {
     <div style={{ maxWidth: 400, margin: '4rem auto', padding: '0 1rem' }}>
       <h1>Verify Email</h1>
       <p>Enter the verification code sent to <strong>{email}</strong>.</p>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => { void handleSubmit(e); }}>
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}

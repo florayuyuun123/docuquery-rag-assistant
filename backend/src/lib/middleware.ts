@@ -11,10 +11,12 @@
  * Satisfies Requirements 12.1, 12.2, 11.1–11.6, 13.1.
  */
 
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { randomUUID } from 'crypto';
-import { createLogger } from './logger.js';
+
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+
 import { AppError } from './errors.js';
+import { createLogger } from './logger.js';
 
 /**
  * The handler signature expected by `withMiddleware`.
@@ -44,7 +46,8 @@ export function withMiddleware(functionName: string, handler: ApiHandler) {
   return async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
     const correlationId = randomUUID();
     const startTime = Date.now();
-    const userId = event.requestContext?.authorizer?.claims?.sub ?? 'anonymous';
+    const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
+    const userId = claims?.['sub'] ?? 'anonymous';
 
     try {
       const result = await handler(event, context, correlationId);

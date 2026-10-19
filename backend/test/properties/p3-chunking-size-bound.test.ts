@@ -7,10 +7,11 @@
  * This is the hard upper bound mandated by CHUNK_SIZE_TOKENS.
  */
 
-import * as fc from 'fast-check';
-import { chunkText } from '../../src/ingest/chunker';
-import { get_encoding } from 'tiktoken';
 import { CHUNK_SIZE_TOKENS } from '@docuquery/shared';
+import * as fc from 'fast-check';
+import { get_encoding } from 'tiktoken';
+
+import { chunkText } from '../../src/ingest/chunker';
 
 describe('Property 3: Chunking Size Bound', () => {
   it('every chunk has at most 1000 tokens', () => {

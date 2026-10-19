@@ -15,19 +15,20 @@
  */
 
 import * as fc from 'fast-check';
+
 import { extractText } from '../../src/ingest/extract';
 
 describe('Property 4: DOCX Paragraph Boundary Preservation', () => {
-  it('paragraph boundaries are preserved as newlines (interface contract)', async () => {
-    await fc.assert(
-      fc.asyncProperty(
+  it('paragraph boundaries are preserved as newlines (interface contract)', () => {
+    fc.assert(
+      fc.property(
         fc.array(
           fc
             .string({ minLength: 1, maxLength: 100 })
             .filter((s) => !s.includes('\n')),
           { minLength: 2, maxLength: 10 },
         ),
-        async (_paragraphs) => {
+        (_paragraphs) => {
           // This property validates the interface contract:
           // extractText with contentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
           // delegates to mammoth, which preserves paragraph boundaries.

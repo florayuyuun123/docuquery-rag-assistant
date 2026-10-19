@@ -10,9 +10,8 @@
  * Satisfies Requirements 6.1–6.7, 7.1–7.5, 8.1–8.5, 9.1.
  */
 
-import { APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { randomUUID } from 'crypto';
+
 import {
   BedrockAgentRuntimeClient,
   RetrieveCommand,
@@ -21,7 +20,8 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from '@aws-sdk/client-bedrock-runtime';
-import { randomUUID } from 'crypto';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import {
   USER_PREFIX,
   CHAT_PREFIX,
@@ -30,6 +30,8 @@ import {
   DEFAULT_CLAUDE_MODEL_ID,
 } from '@docuquery/shared';
 import type { Citation, ChatRecord } from '@docuquery/shared';
+import { APIGatewayProxyResult } from 'aws-lambda';
+
 import { ValidationError, ServiceError, TimeoutError } from '../lib/errors.js';
 import { withMiddleware } from '../lib/middleware.js';
 
@@ -74,7 +76,8 @@ interface ClaudeResponse {
 }
 
 export const handler = withMiddleware('query-fn', async (event, _context, correlationId): Promise<APIGatewayProxyResult> => {
-  const userId = event.requestContext?.authorizer?.claims?.sub as string | undefined;
+  const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
+  const userId = claims?.['sub'];
   if (!userId) {
     throw new ValidationError('Missing userId in authorizer claims', correlationId);
   }
@@ -218,7 +221,7 @@ export const handler = withMiddleware('query-fn', async (event, _context, correl
       const meta = r.metadata ?? {};
       const docName = (meta['documentName'] as string | undefined) ?? 'Unknown document';
       const pageNum = (meta['pageNumber'] as number | null | undefined);
-      const pageRef = pageNum != null ? ` (page ${pageNum})` : '';
+      const pageRef = pageNum !== null && pageNum !== undefined ? ` (page ${pageNum})` : '';
       return `[Excerpt ${i + 1} — ${docName}${pageRef}]\n${r.content?.text ?? ''}`;
     })
     .join('\n\n');

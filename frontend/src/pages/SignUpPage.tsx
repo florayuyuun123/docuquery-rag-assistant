@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react';
 import { signUp } from 'aws-amplify/auth';
+import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 function validatePassword(password: string): string | null {
@@ -42,7 +42,7 @@ export function SignUpPage(): JSX.Element {
   return (
     <div style={{ maxWidth: 400, margin: '4rem auto', padding: '0 1rem' }}>
       <h1>Create Account</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => { void handleSubmit(e); }}>
         <div>
           <label htmlFor="email">Email</label>
           <input

@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import type { Citation } from '@docuquery/shared';
+import { useState } from 'react';
 
 interface Props { citations: Citation[]; }
 
@@ -19,7 +19,7 @@ export function CitationPanel({ citations }: Props): JSX.Element | null {
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0066cc', textDecoration: 'underline', padding: 0 }}
               aria-expanded={expanded === i}
             >
-              {c.documentName} — {c.pageNumber != null ? `Page ${c.pageNumber}` : 'Page N/A'}
+              {c.documentName} — {c.pageNumber !== null && c.pageNumber !== undefined ? `Page ${c.pageNumber}` : 'Page N/A'}
             </button>
             {expanded === i && (
               <blockquote style={{ marginTop: '0.5rem', padding: '0.75rem', background: '#f5f5f5', borderLeft: '3px solid #0066cc', fontSize: '0.9rem' }}>

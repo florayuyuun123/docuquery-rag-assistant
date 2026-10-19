@@ -1,8 +1,9 @@
+import type { ChatRecord } from '@docuquery/shared';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+
 import { getChatHistory } from '../api/historyApi';
 import { CitationPanel } from '../components/CitationPanel';
-import { Link } from 'react-router-dom';
-import type { ChatRecord } from '@docuquery/shared';
 import { useAuthSession } from '../hooks/useAuthSession';
 
 export function HistoryPage(): JSX.Element {

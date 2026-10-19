@@ -4,21 +4,21 @@
  * Validates Requirements 6.1–6.7, 7.1–7.5, 8.1–8.5, 9.1
  */
 
-import { mockClient } from 'aws-sdk-client-mock';
-import 'aws-sdk-client-mock-jest';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import {
   BedrockAgentRuntimeClient,
   RetrieveCommand,
 } from '@aws-sdk/client-bedrock-agent-runtime';
+import type { KnowledgeBaseRetrievalResult as RetrievalResult } from '@aws-sdk/client-bedrock-agent-runtime';
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from '@aws-sdk/client-bedrock-runtime';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { mockClient } from 'aws-sdk-client-mock';
+import 'aws-sdk-client-mock-jest';
 
 import { handler } from '../../src/query/handler';
-import { APIGatewayProxyEvent } from 'aws-lambda';
-import type { KnowledgeBaseRetrievalResult as RetrievalResult } from '@aws-sdk/client-bedrock-agent-runtime';
 
 // ── AWS SDK mocks ────────────────────────────────────────────────────────────
 const dynamoMock = mockClient(DynamoDBDocumentClient);
@@ -180,11 +180,11 @@ describe('POST /query — successful answer', () => {
 
     const citations = data['citations'] as Array<Record<string, unknown>>;
     expect(citations).toHaveLength(2);
-    expect(citations[0]!['documentId']).toBe('doc-id-0');
-    expect(citations[0]!['documentName']).toBe('document-0.pdf');
-    expect(citations[0]!['pageNumber']).toBe(1);
-    expect(citations[0]!['chunkText']).toBe('Chunk text 0');
-    expect(citations[0]!['relevanceScore']).toBe(0.9);
+    expect(citations[0]['documentId']).toBe('doc-id-0');
+    expect(citations[0]['documentName']).toBe('document-0.pdf');
+    expect(citations[0]['pageNumber']).toBe(1);
+    expect(citations[0]['chunkText']).toBe('Chunk text 0');
+    expect(citations[0]['relevanceScore']).toBe(0.9);
 
     // Chat record persisted
     expect(dynamoMock).toHaveReceivedCommandTimes(PutCommand, 1);

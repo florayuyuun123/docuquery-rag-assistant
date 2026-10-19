@@ -4,20 +4,22 @@
  * Validates Requirements 3.1, 3.2, 3.5, 3.6, 3.10, 10.4
  */
 
-import { mockClient } from 'aws-sdk-client-mock';
-import 'aws-sdk-client-mock-jest';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-
+import { APIGatewayProxyEvent } from 'aws-lambda';
+// eslint-disable-next-line import/order
+import { mockClient } from 'aws-sdk-client-mock';
+import 'aws-sdk-client-mock-jest';
 // Mock the presigner before importing the handler (it pulls getSignedUrl at module load)
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: jest.fn().mockResolvedValue('https://mock-presigned-url'),
 }));
 
+/* eslint-disable import/order */
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+/* eslint-enable import/order */
 
 import { handler } from '../../src/upload-url/handler';
-import { APIGatewayProxyEvent } from 'aws-lambda';
 
 // ── AWS SDK mocks ────────────────────────────────────────────────────────────
 const s3Mock = mockClient(S3Client);

@@ -8,8 +8,9 @@
  */
 
 import * as fc from 'fast-check';
-import { chunkText } from '../../src/ingest/chunker';
 import { get_encoding } from 'tiktoken';
+
+import { chunkText } from '../../src/ingest/chunker';
 
 describe('Property 2: Chunking Completeness', () => {
   it('all tokens from input appear in at least one chunk', () => {

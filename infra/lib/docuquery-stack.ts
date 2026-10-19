@@ -1,15 +1,16 @@
-﻿import * as cdk from 'aws-cdk-lib';
+﻿import * as path from 'path';
+
+import * as cdk from 'aws-cdk-lib';
+import * as amplify from 'aws-cdk-lib/aws-amplify';
+import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as apigw from 'aws-cdk-lib/aws-apigateway';
-import * as amplify from 'aws-cdk-lib/aws-amplify';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import { Construct } from 'constructs';
-import * as path from 'path';
 
 export interface DocuQueryStackProps extends cdk.StackProps {
   allowedOrigins: string;

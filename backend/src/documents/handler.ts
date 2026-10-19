@@ -8,9 +8,12 @@
  * Satisfies Requirements 5.1–5.6, 10.4, 11.3–11.4.
  */
 
-import { APIGatewayProxyResult } from 'aws-lambda';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  BedrockAgentClient,
+  StartIngestionJobCommand,
+} from '@aws-sdk/client-bedrock-agent';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import {
   DynamoDBDocumentClient,
   QueryCommand,
@@ -19,14 +22,12 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import {
-  BedrockAgentClient,
-  StartIngestionJobCommand,
-} from '@aws-sdk/client-bedrock-agent';
-import {
   USER_PREFIX,
   DOC_PREFIX,
   USER_CREATED_AT_INDEX,
 } from '@docuquery/shared';
+import { APIGatewayProxyResult } from 'aws-lambda';
+
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
 import { withMiddleware } from '../lib/middleware.js';
 
@@ -39,7 +40,8 @@ const BUCKET_NAME = process.env['BUCKET_NAME'] ?? '';
 const KNOWLEDGE_BASE_ID = process.env['KNOWLEDGE_BASE_ID'] ?? '';
 
 export const handler = withMiddleware('documents-fn', async (event, _context, correlationId): Promise<APIGatewayProxyResult> => {
-  const userId = event.requestContext?.authorizer?.claims?.sub as string | undefined;
+  const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
+  const userId = claims?.['sub'];
   if (!userId) {
     throw new ValidationError('Missing userId in authorizer claims', correlationId);
   }

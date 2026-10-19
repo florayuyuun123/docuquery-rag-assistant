@@ -9,6 +9,7 @@
  */
 
 import * as fc from 'fast-check';
+
 import { extractText } from '../../src/ingest/extract';
 
 describe('Property 1: TXT Round-Trip Fidelity', () => {

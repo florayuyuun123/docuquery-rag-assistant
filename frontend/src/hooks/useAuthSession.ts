@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { getCurrentUser, signOut as amplifySignOut } from 'aws-amplify/auth';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthSession {

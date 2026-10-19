@@ -4,8 +4,10 @@
  * Validates Requirements 5.1–5.6, 10.4, 11.3–11.4
  */
 
-import { mockClient } from 'aws-sdk-client-mock';
-import 'aws-sdk-client-mock-jest';
+import {
+  BedrockAgentClient,
+  StartIngestionJobCommand,
+} from '@aws-sdk/client-bedrock-agent';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import {
   DynamoDBDocumentClient,
@@ -14,13 +16,11 @@ import {
   DeleteCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import {
-  BedrockAgentClient,
-  StartIngestionJobCommand,
-} from '@aws-sdk/client-bedrock-agent';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { mockClient } from 'aws-sdk-client-mock';
+import 'aws-sdk-client-mock-jest';
 
 import { handler } from '../../src/documents/handler';
-import { APIGatewayProxyEvent } from 'aws-lambda';
 
 // ── AWS SDK mocks ────────────────────────────────────────────────────────────
 const s3Mock = mockClient(S3Client);

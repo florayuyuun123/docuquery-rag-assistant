@@ -4,12 +4,12 @@
  * Validates Requirements 9.1–9.5
  */
 
+import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
 import { handler } from '../../src/history/handler';
-import { APIGatewayProxyEvent } from 'aws-lambda';
 
 // ── AWS SDK mocks ────────────────────────────────────────────────────────────
 const dynamoMock = mockClient(DynamoDBDocumentClient);
@@ -82,9 +82,9 @@ describe('GET /history', () => {
 
     expect(data).toHaveLength(3);
     // Order is preserved exactly as returned by DynamoDB
-    expect(data[0]!['SK']).toBe(records[0]!['SK']);
-    expect(data[1]!['SK']).toBe(records[1]!['SK']);
-    expect(data[2]!['SK']).toBe(records[2]!['SK']);
+    expect(data[0]['SK']).toBe(records[0]['SK']);
+    expect(data[1]['SK']).toBe(records[1]['SK']);
+    expect(data[2]['SK']).toBe(records[2]['SK']);
   });
 
   it('2. QueryCommand is called with Limit=50', async () => {
