@@ -117,7 +117,9 @@ The key guarantee: the system prompt explicitly forbids the model from using kno
 
 ## Architecture Overview
 
-> **Open `docs/architecture.drawio`** in [diagrams.net](https://app.diagrams.net) or the VS Code Draw.io extension to view the interactive diagram with AWS official icons.
+> The architecture diagram is in [`docs/architecture.md`](docs/architecture.md).
+> It uses **Mermaid** and renders natively on GitHub — no plugins needed.
+> Raw source: [`docs/architecture.mmd`](docs/architecture.mmd) — paste at [mermaid.live](https://mermaid.live) for an interactive view.
 
 The architecture is divided into five tiers:
 
@@ -273,6 +275,16 @@ The monorepo uses `module: Node16` (ESM) throughout, but several dependencies (`
 - Lambda bundles use `esbuild` (handles ESM/CJS interop natively)
 - Jest config uses `moduleNameMapper` to strip `.js` extensions and force CommonJS compilation via inline `tsconfig` override in `ts-jest`
 - `pdf-parse` is imported via `require()` to avoid the ESM default export issue
+
+### Challenge 8: ESLint type-aware rules in a monorepo
+
+`eslint-plugin-import` was configured with `eslint-import-resolver-typescript` in the settings, but that package was never installed. This caused every `import/` rule to crash with `typescript with invalid interface loaded as resolver` on CI.
+
+**Solution:** Two changes to `.eslintrc.js`:
+- Removed `plugin:import/typescript` and `settings['import/resolver'].typescript` — these are only needed for `import/no-unresolved`, which was already disabled
+- Added `project: true` + `tsconfigRootDir: __dirname` to `parserOptions` so type-aware rules (`no-floating-promises`, `no-unsafe-*`) find each package's `tsconfig.json` automatically
+
+Also added `test/**/*` to `backend/tsconfig.json` `include` so ESLint can type-check test files alongside source files. This surfaced real bugs: unsafe `.sub` member access on `any`-typed JWT claims (fixed by casting to `Record<string, string>`), `!=` instead of `!==`, and async React handlers passed directly to `onSubmit` (fixed with `void` wrapper).
 
 ---
 
@@ -750,7 +762,7 @@ VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-y4e69bwevqic
 ## Running Tests
 
 ```bash
-# Backend: unit + property-based tests
+# Backend: unit + property-based tests (10 suites, 62 tests)
 npm test --workspace=backend
 
 # CDK infrastructure assertions
@@ -1309,10 +1321,18 @@ to confirm no `DocuQuery`-tagged charges are accruing.
 
 ## Architecture Diagram
 
-The draw.io file at `docs/architecture.drawio` uses official AWS shape libraries and can be opened in:
-- [diagrams.net](https://app.diagrams.net) (free, browser-based)
-- VS Code with the [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio) extension
-- JetBrains IDEs with the Draw.io plugin
+The diagram is in [`docs/architecture.md`](docs/architecture.md) using **Mermaid** syntax.
+It renders automatically on GitHub and in any Mermaid-capable viewer.
+
+Viewing options:
+- **GitHub** — opens and renders automatically at the link above
+- **VS Code** — install [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid)
+- **Live editor** — paste `docs/architecture.mmd` at [mermaid.live](https://mermaid.live)
+- **draw.io** — File → Import from → Device, select `docs/architecture.mmd`
+
+> Note: draw.io does not render official AWS service icons from Mermaid source.
+> The diagram uses colour-coded node groups (orange = AWS managed, purple = Bedrock/AOSS,
+> green = storage, red = observability) to convey service categories clearly.
 
 ---
 
