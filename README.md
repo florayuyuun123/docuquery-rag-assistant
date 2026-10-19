@@ -1,4 +1,4 @@
-# DocuQuery — Building a RAG-Powered Document Q&A Assistant on AWS
+﻿# DocuQuery — Building a RAG-Powered Document Q&A Assistant on AWS
 
 > **"Stop searching. Start asking."** Upload your PDFs, policies, and reports. Ask questions in plain English. Get answers grounded in your own documents — with cited sources you can verify.
 
@@ -15,11 +15,15 @@
 7. [Project Structure](#project-structure)
 8. [Prerequisites](#prerequisites)
 9. [Deployment Guide](#deployment-guide)
-10. [Verifying a Successful Deployment](#verifying-a-successful-deployment)
-11. [Local Development](#local-development)
-12. [Running Tests](#running-tests)
-13. [Cost Breakdown](#cost-breakdown)
-14. [Lessons Learned](#lessons-learned)
+10. [Deployed Resources](#deployed-resources)
+11. [Verifying a Successful Deployment](#verifying-a-successful-deployment)
+12. [Local Development](#local-development)
+13. [Running Tests](#running-tests)
+14. [CI/CD Pipeline](#cicd-pipeline)
+15. [Manual Application Testing](#manual-application-testing)
+16. [Cost Breakdown](#cost-breakdown)
+17. [Lessons Learned](#lessons-learned)
+18. [Cleanup](#cleanup)
 
 ---
 
@@ -89,7 +93,7 @@ YOUR DOCUMENT
 [3] EMBED            → Titan Embeddings V2 → 1,024-dimension vector
      │
      ▼
-[4] INDEX            → Bedrock Knowledge Base → S3 Vectors (your account only)
+[4] INDEX            → Bedrock Knowledge Base → OpenSearch Serverless (your account only)
 
 AT QUERY TIME:
      │
@@ -120,14 +124,15 @@ The architecture is divided into five tiers:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  TIER 1 — FRONTEND                                                           │
-│  React 18 + TypeScript SPA  hosted on  AWS Amplify                          │
-│  Cognito Hosted UI flows · JWT token management · XHR upload progress       │
+│  React 18 + TypeScript SPA  hosted on  AWS Amplify (App: d3m1ddehppkb04)   │
+│  Cognito auth flows · JWT token management · XHR upload progress            │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │ HTTPS + JWT Bearer
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  TIER 2 — API                                                                │
 │  Amazon API Gateway REST  ←→  Amazon Cognito (JWT authorizer)               │
+│  https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/               │
 │  5 routes · CORS · Request validation · Throttling                          │
 └────┬──────────────┬──────────────┬────────────────┬───────────────┬─────────┘
      │              │              │                │               │
@@ -140,18 +145,20 @@ The architecture is divided into five tiers:
      ▼             ▼             ▼                ▼                │
 ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐       │
 │  TIER 3  │  │ Amazon   │  │ Amazon   │  │  Amazon      │       │
-│ Amazon   │  │ DynamoDB │  │ Textract │  │  Bedrock     │       │
-│   S3     │  │ (single  │  │  (OCR)   │  │  KB +        │◄──────┘
-│(SSE-S3)  │  │  table)  │  │          │  │  Claude/     │
-└──────────┘  └──────────┘  └──────────┘  │  Titan       │
-                                           └──────────────┘
+│ Amazon   │  │ DynamoDB │  │ Textract │  │  Bedrock KB  │◄──────┘
+│   S3     │  │ (single  │  │  (OCR)   │  │  (LPLGCWRHOM)│
+│(SSE-S3)  │  │  table)  │  │          │  │  Claude 3 /  │
+└──────────┘  └──────────┘  └──────────┘  │  Titan Emb.  │
+                                           └──────┬───────┘
                                                   │
                                                   ▼
-                                     ┌────────────────────┐
-                                     │ S3 Vectors         │
-                                     │ (vector index,     │
-                                     │  pay-per-request)  │
-                                     └────────────────────┘
+                                     ┌────────────────────────┐
+                                     │ OpenSearch Serverless  │
+                                     │ Collection:            │
+                                     │ docuquery-vectors      │
+                                     │ Index: docuquery-index │
+                                     │ (1024-dim, HNSW/faiss) │
+                                     └────────────────────────┘
                                   ↕ all Lambdas
                              Amazon CloudWatch
                           (structured JSON, 30-day)
@@ -189,11 +196,15 @@ Browser ──► POST /query { question } ──► query-fn
 
 ## Key Design Decisions & Challenges
 
-### Challenge 1: Choosing a vector store that doesn't cost $700/month
+### Challenge 1: Vector store selection
 
-The standard recommendation for Bedrock Knowledge Bases is OpenSearch Serverless. The problem: OpenSearch Serverless has a **minimum cost of ~$700/month** regardless of usage. For a learning project, that's a non-starter.
+The standard recommendation for Bedrock Knowledge Bases is OpenSearch Serverless (AOSS). While AOSS has a minimum cost of ~$700/month at standby capacity in some configurations, this project uses it because:
 
-**Solution:** Amazon recently introduced **S3 Vectors** as a Bedrock Knowledge Base backend. It charges only for vectors stored and queries made — making idle cost effectively $0. The tradeoff is slightly higher per-query latency vs. OpenSearch, which is acceptable for a document Q&A use case where 10-second responses are within target.
+- AOSS is the most fully-featured and battle-tested vector store backend for Bedrock KBs
+- The AOSS collection in this deployment uses the `VECTORSEARCH` type with `standbyReplicas: ENABLED`
+- The `docuquery-vectors` collection + `docuquery-index` (HNSW/faiss, 1024 dimensions) was created via AWS CLI, not the console
+
+> **Note on S3 Vectors:** The original design intended to use Amazon S3 Vectors (a newer, pay-per-request vector backend). At the time of this deployment, AOSS was selected as the proven, stable option. S3 Vectors remains the lower-cost alternative for future consideration.
 
 ---
 
@@ -205,7 +216,7 @@ A shared Knowledge Base means all users' document chunks live in the same index.
 ```typescript
 filter: { equals: { key: "userId", value: callerId } }
 ```
-This is enforced at the vector store level, not in application code, making it robust. The S3 key prefix (`USER#{userId}/DOC#{docId}/`) provides a second layer of separation in raw storage.
+This is enforced at the vector store level, not in application code. The S3 key prefix (`USER#{userId}/DOC#{docId}/`) provides a second layer of separation in raw storage.
 
 ---
 
@@ -244,7 +255,17 @@ This was validated with property-based tests (fast-check) covering 100 iteration
 
 ---
 
-### Challenge 6: TypeScript ESM/CJS interop in Lambda
+### Challenge 6: CDK bootstrap blocked by EarlyValidation hook
+
+When bootstrapping CDK in this account for the first time, the `AWS::EarlyValidation::ResourceExistenceCheck` hook rejected the changeset because a stale CDK staging bucket (`cdk-hnb659fds-assets-800445863339-us-east-1`) from a prior attempt already existed.
+
+**Solution:** Manually empty and delete the orphaned bucket (including all object versions and delete markers), delete the stuck `CDKToolkit` stack in `REVIEW_IN_PROGRESS` state, then re-run `cdk bootstrap`. With a clean slate, bootstrap succeeded in under 2 minutes.
+
+**Lesson:** When CDK bootstrap fails partway through, always check for orphaned S3 staging buckets before retrying. The bucket name follows the pattern `cdk-hnb659fds-assets-{account}-{region}`.
+
+---
+
+### Challenge 7: TypeScript ESM/CJS interop in Lambda
 
 The monorepo uses `module: Node16` (ESM) throughout, but several dependencies (`pdf-parse`, `tiktoken`, `mammoth`) ship as CommonJS. Lambda's Node.js 20 runtime supports both, but `ts-jest` for unit tests does not handle ESM `.js` extension imports gracefully without configuration.
 
@@ -260,14 +281,14 @@ The monorepo uses `module: Node16` (ESM) throughout, but several dependencies (`
 | Layer | Technology | Why |
 |-------|-----------|-----|
 | Frontend | React 18 + TypeScript + Vite | Fast builds, strict types, Amplify v6 integration |
-| Hosting | AWS Amplify | Managed CI/CD, Cognito integration built-in |
+| Hosting | AWS Amplify (App: `d3m1ddehppkb04`) | Managed CI/CD, Cognito integration built-in |
 | Auth | Amazon Cognito | Managed JWT, email MFA, account lockout — no auth server to run |
 | API | API Gateway REST | Per-request billing, Cognito authorizer, request validation |
-| Backend | Lambda (Node.js 20, ARM64) | ~20% cheaper than x86, cold starts acceptable |
+| Backend | Lambda × 5 (Node.js 20, ARM64) | ~20% cheaper than x86, cold starts acceptable |
 | Storage | Amazon S3 + DynamoDB | S3 for raw files, DDB single-table for metadata + chat |
 | Extraction | Textract + mammoth + pdf-parse | Each optimised for its file type |
 | Embeddings | Bedrock Titan Embeddings V2 | Managed, no embedding server to run |
-| Vector store | Bedrock KB + S3 Vectors | Pay-per-request, avoids OpenSearch Serverless cost |
+| Vector store | Bedrock KB + OpenSearch Serverless | AOSS `docuquery-vectors`, HNSW/faiss, 1024 dimensions |
 | Generation | Bedrock Claude 3 Haiku | Fast (median 2s), cheap ($0.00025/1K input tokens) |
 | IaC | AWS CDK v2 TypeScript | Type-safe, L2/L3 constructs, per-Lambda IAM |
 | Observability | CloudWatch structured JSON | Correlation IDs, 30-day retention, zero extra tooling |
@@ -309,6 +330,7 @@ docuquery-rag-assistant/
 │       └── properties/               # fast-check (P1–P12)
 │
 ├── frontend/                         ← React SPA
+│   ├── .env.example                  # Template — copy to .env.local for local dev
 │   └── src/
 │       ├── api/                      # documentsApi, queryApi, historyApi
 │       ├── components/               # UploadZone, CitationPanel, ErrorBoundary
@@ -318,20 +340,18 @@ docuquery-rag-assistant/
 └── infra/                            ← AWS CDK stack
     ├── bin/docuquery.ts              # CDK app entry (reads context, no hardcoded values)
     ├── lib/docuquery-stack.ts        # All resources in one deployable stack
-    └── test/docuquery-stack.test.ts  # 16 CDK assertion tests
+    └── test/docuquery-stack.test.ts  # CDK assertion tests
 ```
 
 ---
 
 ## Prerequisites
 
-Before deploying, ensure you have:
-
-**1. AWS CLI configured**
+**1. AWS CLI configured with the target account**
 ```bash
-aws configure
-# Access Key ID, Secret Access Key, region: us-east-1, output: json
-aws sts get-caller-identity   # confirm credentials work
+aws configure --profile flotech-demo-account
+# Account: 800445863339 | region: us-east-1 | output: json
+aws sts get-caller-identity --profile flotech-demo-account
 ```
 
 **2. Node.js 20+ and npm 10+**
@@ -342,70 +362,282 @@ npm --version    # must be ≥ 10
 
 **3. CDK bootstrapped** (one-time per account/region)
 ```bash
-npx cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/us-east-1
+npx cdk bootstrap aws://800445863339/us-east-1 --profile flotech-demo-account
 ```
+
+> **Heads-up:** If bootstrap fails with `AWS::EarlyValidation::ResourceExistenceCheck`, an orphaned CDK staging bucket likely exists from a prior attempt. See [Challenge 6](#challenge-6-cdk-bootstrap-blocked-by-earlyvalidation-hook) above for the fix.
 
 **4. Bedrock model access**
 
-Amazon foundation models (Titan Embeddings V2) are automatically enabled when first invoked — no manual activation needed. For Anthropic models (Claude 3 Haiku), first-time users may need to submit use case details before access is granted.
+The AWS Model Access page has been retired. Foundation models are now **automatically enabled on first invocation** — no manual activation step needed.
 
-If this is your first time using Anthropic models in your account:
-1. Open the [Amazon Bedrock console](https://console.aws.amazon.com/bedrock)
-2. Navigate to **Model access**
-3. If prompted, complete the Anthropic use case form for **Claude 3 Haiku**
-4. Access is typically granted within a few minutes
+> **Anthropic models only:** First-time Anthropic users in a given account may still be prompted to submit a use case form for Claude 3 Haiku before the model activates. If `POST /query` returns `502`, check CloudWatch logs for `AccessDeniedException` from Bedrock and complete the form in the Bedrock console if shown.
 
-All other models in this project (Titan Embeddings V2) invoke instantly with no prior setup.
+**5. Bedrock Knowledge Base**
 
-**5. Bedrock Knowledge Base creation**
-
-The CDK stack accepts a `knowledgeBaseId` context parameter. You need to create the KB manually first (or via CDK's `CfnKnowledgeBase`) and then pass its ID:
-
-```bash
-# After deployment, update cdk.json to add your KB ID:
-# "knowledgeBaseId": "XXXXXXXXXX"
-# Then re-deploy: npx cdk deploy
-```
+The KB must exist before deploying the stack with its ID. Follow the steps in the [Deployment Guide](#deployment-guide) — a full CLI-based KB creation script is included.
 
 ---
 
 ## Deployment Guide
 
+This is the exact sequence used for the current deployment (account `800445863339`, region `us-east-1`).
+
 ```bash
-# Step 1 — Install all dependencies
+# ── Step 1: Install all dependencies ──────────────────────────────────────────
 npm install
 
-# Step 2 — Build the shared package (types + constants)
+# ── Step 2: Build the shared package ──────────────────────────────────────────
 npm run build --workspace=shared
 
-# Step 3 — Run all tests to verify the codebase
-npm test --workspace=backend    # 62 tests
-npm test --workspace=infra      # 16 CDK assertions
-
-# Step 4 — Deploy the CDK stack
+# ── Step 3: Bootstrap CDK (one-time per account/region) ──────────────────────
 cd infra
-npm install
-npx cdk deploy --require-approval never
+npx cdk bootstrap aws://800445863339/us-east-1 --profile flotech-demo-account
 
-# ── CDK outputs will print to your terminal ──────────────────────────────────
-# DocuQueryStack.UserPoolId         = us-east-1_XXXXXXXXX
-# DocuQueryStack.UserPoolClientId   = xxxxxxxxxxxxxxxxxxxxxxxxxx
-# DocuQueryStack.IdentityPoolId     = us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-# DocuQueryStack.ApiGatewayUrl      = https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/dev/
-# DocuQueryStack.DocumentBucketName = docuquery-documents-XXXXXXXXXXXX-us-east-1-dev
-# DocuQueryStack.AmplifyAppId       = dXXXXXXXXX
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Step 4: Initial CDK deploy (no KB ID yet) ─────────────────────────────────
+npx cdk deploy \
+  --profile flotech-demo-account \
+  --require-approval never \
+  --context environment=dev \
+  --context awsRegion=us-east-1 \
+  --context awsAccountId=800445863339
 
-# Step 5 — Configure the frontend environment
-cd ../frontend
-cp .env.example .env
-# Edit .env and paste the values from the CDK output above
-# NEVER commit .env to source control
-
-# Step 6 — Build the frontend
-npm run build
-# Output is in frontend/dist/ — deploy via Amplify or S3 static hosting
+# CDK outputs: save these — you will need them in Step 7 and Step 9
+# DocuQueryStack.UserPoolId         = us-east-1_mBss1Hu0l
+# DocuQueryStack.UserPoolClientId   = 5jgr5ml0r123hmn2blj720r1du
+# DocuQueryStack.IdentityPoolId     = us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43
+# DocuQueryStack.ApiGatewayUrl      = https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/
+# DocuQueryStack.DocumentBucketName = docuquerystack-documentbucketae41e5a9-y4e69bwevqic
+# DocuQueryStack.AmplifyAppId       = d3m1ddehppkb04
 ```
+
+### Create the Bedrock Knowledge Base (CLI)
+
+After the stack is deployed you have the S3 bucket name needed for the data source.
+
+```bash
+# ── Step 5a: Create IAM role for the KB ──────────────────────────────────────
+aws iam create-role --role-name docuquery-kb-role \
+  --assume-role-policy-document '{
+    "Version":"2012-10-17",
+    "Statement":[{
+      "Effect":"Allow",
+      "Principal":{"Service":"bedrock.amazonaws.com"},
+      "Action":"sts:AssumeRole",
+      "Condition":{
+        "StringEquals":{"aws:SourceAccount":"800445863339"},
+        "ArnLike":{"aws:SourceArn":"arn:aws:bedrock:us-east-1:800445863339:knowledge-base/*"}
+      }
+    }]
+  }' --profile flotech-demo-account
+
+# Attach S3 read permission
+aws iam put-role-policy --role-name docuquery-kb-role --policy-name S3Access \
+  --policy-document '{
+    "Version":"2012-10-17",
+    "Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket"],
+    "Resource":["arn:aws:s3:::docuquerystack-documentbucketae41e5a9-y4e69bwevqic",
+                "arn:aws:s3:::docuquerystack-documentbucketae41e5a9-y4e69bwevqic/*"]}]
+  }' --profile flotech-demo-account
+
+# Attach Bedrock embedding permission
+aws iam put-role-policy --role-name docuquery-kb-role --policy-name BedrockEmbeddingAccess \
+  --policy-document '{
+    "Version":"2012-10-17",
+    "Statement":[{"Effect":"Allow","Action":"bedrock:InvokeModel",
+    "Resource":"arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"}]
+  }' --profile flotech-demo-account
+
+# ── Step 5b: Create OpenSearch Serverless vector collection ───────────────────
+# Encryption policy (required first)
+aws opensearchserverless create-security-policy --name docuquery-enc --type encryption \
+  --policy '{"Rules":[{"ResourceType":"collection","Resource":["collection/docuquery-vectors"]}],"AWSOwnedKey":true}' \
+  --region us-east-1 --profile flotech-demo-account
+
+# Network policy (allow Bedrock to reach it)
+aws opensearchserverless create-security-policy --name docuquery-net --type network \
+  --policy '[{"Rules":[{"ResourceType":"collection","Resource":["collection/docuquery-vectors"]},{"ResourceType":"dashboard","Resource":["collection/docuquery-vectors"]}],"AllowFromPublic":true}]' \
+  --region us-east-1 --profile flotech-demo-account
+
+# Create collection
+aws opensearchserverless create-collection --name docuquery-vectors \
+  --type VECTORSEARCH --region us-east-1 --profile flotech-demo-account
+# Returns collection ID, e.g. h04acuqvvvd64qsauu2k — wait ~3 min for ACTIVE status
+
+# Data access policy — grants KB role full index access
+aws opensearchserverless create-access-policy --name docuquery-access --type data \
+  --policy '[{"Rules":[
+    {"ResourceType":"index","Resource":["index/docuquery-vectors/*"],
+     "Permission":["aoss:CreateIndex","aoss:DeleteIndex","aoss:UpdateIndex",
+                   "aoss:DescribeIndex","aoss:ReadDocument","aoss:WriteDocument"]},
+    {"ResourceType":"collection","Resource":["collection/docuquery-vectors"],
+     "Permission":["aoss:CreateCollectionItems","aoss:DeleteCollectionItems",
+                   "aoss:UpdateCollectionItems","aoss:DescribeCollectionItems"]}],
+    "Principal":["arn:aws:iam::800445863339:role/docuquery-kb-role",
+                 "arn:aws:iam::800445863339:user/YOUR_IAM_USER"]}]' \
+  --region us-east-1 --profile flotech-demo-account
+
+# Attach AOSS API access to the KB role (replace COLLECTION_ID)
+aws iam put-role-policy --role-name docuquery-kb-role --policy-name AOSSAccess \
+  --policy-document '{
+    "Version":"2012-10-17",
+    "Statement":[{"Effect":"Allow","Action":"aoss:APIAccessAll",
+    "Resource":"arn:aws:aoss:us-east-1:800445863339:collection/COLLECTION_ID"}]
+  }' --profile flotech-demo-account
+
+# ── Step 5c: Create vector index in the collection ───────────────────────────
+# Use a signed HTTP PUT to the collection endpoint:
+# PUT https://{collectionId}.us-east-1.aoss.amazonaws.com/docuquery-index
+# Body:
+# {
+#   "settings": {"index": {"knn": true}},
+#   "mappings": {
+#     "properties": {
+#       "embedding": {"type":"knn_vector","dimension":1024,
+#                     "method":{"name":"hnsw","engine":"faiss","space_type":"l2"}},
+#       "text":     {"type":"text"},
+#       "metadata": {"type":"text"}
+#     }
+#   }
+# }
+
+# ── Step 5d: Create the Bedrock Knowledge Base ────────────────────────────────
+# (Use the Python script below or boto3 directly — the AWS CLI JSON escaping
+#  on Windows PowerShell is unreliable for nested structures)
+
+python - <<'PYEOF'
+import boto3
+session = boto3.Session(profile_name="flotech-demo-account", region_name="us-east-1")
+client = session.client("bedrock-agent")
+resp = client.create_knowledge_base(
+    name="docuquery-dev",
+    roleArn="arn:aws:iam::800445863339:role/docuquery-kb-role",
+    knowledgeBaseConfiguration={
+        "type": "VECTOR",
+        "vectorKnowledgeBaseConfiguration": {
+            "embeddingModelArn": "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0",
+            "embeddingModelConfiguration": {
+                "bedrockEmbeddingModelConfiguration": {"dimensions": 1024}
+            }
+        }
+    },
+    storageConfiguration={
+        "type": "OPENSEARCH_SERVERLESS",
+        "opensearchServerlessConfiguration": {
+            "collectionArn": "arn:aws:aoss:us-east-1:800445863339:collection/COLLECTION_ID",
+            "vectorIndexName": "docuquery-index",
+            "fieldMapping": {"vectorField":"embedding","textField":"text","metadataField":"metadata"}
+        }
+    }
+)
+print("KB ID:", resp["knowledgeBase"]["knowledgeBaseId"])
+PYEOF
+
+# ── Step 5e: Create S3 data source ────────────────────────────────────────────
+python - <<'PYEOF'
+import boto3
+session = boto3.Session(profile_name="flotech-demo-account", region_name="us-east-1")
+client = session.client("bedrock-agent")
+resp = client.create_data_source(
+    knowledgeBaseId="KB_ID_FROM_STEP_5d",
+    name="docuquery-s3-source",
+    dataSourceConfiguration={
+        "type": "S3",
+        "s3Configuration": {
+            "bucketArn": "arn:aws:s3:::docuquerystack-documentbucketae41e5a9-y4e69bwevqic"
+        }
+    },
+    vectorIngestionConfiguration={
+        "chunkingConfiguration": {
+            "chunkingStrategy": "FIXED_SIZE",
+            "fixedSizeChunkingConfiguration": {"maxTokens": 1000, "overlapPercentage": 20}
+        }
+    }
+)
+print("Data Source ID:", resp["dataSource"]["dataSourceId"])
+PYEOF
+```
+
+### Re-deploy with the Knowledge Base ID
+
+```bash
+# ── Step 6: Re-deploy CDK stack with KB ID wired into Lambda env + IAM ───────
+cd infra
+npx cdk deploy \
+  --profile flotech-demo-account \
+  --require-approval never \
+  --context environment=dev \
+  --context awsRegion=us-east-1 \
+  --context awsAccountId=800445863339 \
+  --context knowledgeBaseId=LPLGCWRHOM
+```
+
+### Configure the frontend
+
+```bash
+# ── Step 7: Copy CDK outputs into frontend env file ───────────────────────────
+# frontend/.env.local  (never commit — already in .gitignore)
+VITE_USER_POOL_ID=us-east-1_mBss1Hu0l
+VITE_USER_POOL_CLIENT_ID=5jgr5ml0r123hmn2blj720r1du
+VITE_IDENTITY_POOL_ID=us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43
+VITE_API_URL=https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/
+VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-y4e69bwevqic
+
+# ── Step 8: Build the frontend ────────────────────────────────────────────────
+cd ../frontend && npm run build
+# Output: frontend/dist/ — connect to Amplify via console or CLI for hosting
+```
+
+---
+
+## Deployed Resources
+
+Current deployment — account `800445863339`, region `us-east-1`.
+
+### CDK Stack
+
+| Output | Value |
+|--------|-------|
+| Stack name | `DocuQueryStack` |
+| Stack ARN | `arn:aws:cloudformation:us-east-1:800445863339:stack/DocuQueryStack/61c21df0-cba5-11f1-93db-12ffcd224ecd` |
+| Stack status | `CREATE_COMPLETE` |
+
+### Core AWS Resources
+
+| Service | Resource name | Value / ID |
+|---------|--------------|-----------|
+| Cognito User Pool | `docuquery-dev` | `us-east-1_mBss1Hu0l` |
+| Cognito App Client | — | `5jgr5ml0r123hmn2blj720r1du` |
+| Cognito Identity Pool | — | `us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43` |
+| DynamoDB Table | `docuquery-dev` | PAY_PER_REQUEST · AES256 · 1 GSI |
+| S3 Document Bucket | `docuquerystack-documentbucketae41e5a9-y4e69bwevqic` | SSE-S3 · Block Public Access |
+| API Gateway | `docuquery-dev` | `https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/` |
+| Lambda: upload-url | `docuquery-upload-url-dev` | ARM64 · Node 20 · 29s timeout |
+| Lambda: ingest | `docuquery-ingest-dev` | ARM64 · Node 20 · 5m timeout · 1024 MB |
+| Lambda: documents | `docuquery-documents-dev` | ARM64 · Node 20 · 29s timeout |
+| Lambda: query | `docuquery-query-dev` | ARM64 · Node 20 · 29s timeout |
+| Lambda: history | `docuquery-history-dev` | ARM64 · Node 20 · 29s timeout |
+| Amplify App | `docuquery-dev` | App ID: `d3m1ddehppkb04` |
+
+### Bedrock & Vector Store Resources
+
+| Resource | Name / ID | Notes |
+|----------|----------|-------|
+| Bedrock Knowledge Base | `docuquery-dev` | ID: `LPLGCWRHOM` |
+| KB Data Source | `docuquery-s3-source` | ID: `BIMFCFRPEH` · S3-backed |
+| AOSS Collection | `docuquery-vectors` | ID: `h04acuqvvvd64qsauu2k` · ACTIVE |
+| AOSS Vector Index | `docuquery-index` | 1024-dim · HNSW/faiss · l2 space |
+| KB IAM Role | `docuquery-kb-role` | `arn:aws:iam::800445863339:role/docuquery-kb-role` |
+| Embedding model | Titan Embeddings V2 | `amazon.titan-embed-text-v2:0` |
+| Generation model | Claude 3 Haiku | `anthropic.claude-3-haiku-20240307-v1:0` |
+
+### CDK Bootstrap
+
+| Resource | Value |
+|----------|-------|
+| CDKToolkit stack | `CREATE_COMPLETE` |
+| Staging bucket | `cdk-hnb659fds-assets-800445863339-us-east-1` |
+| Bootstrap qualifier | `hnb659fds` |
 
 ---
 
@@ -414,86 +646,82 @@ npm run build
 ### Step 1 — CloudFormation status
 
 ```bash
-cd infra && npx cdk diff
-# Should output: "There were no differences"
+cd infra
+npx cdk diff --profile flotech-demo-account --context environment=dev \
+  --context knowledgeBaseId=LPLGCWRHOM
+# Expected: "There were no differences"
 ```
-
-In the AWS Console → **CloudFormation → DocuQueryStack**:
-- Stack status: `CREATE_COMPLETE` ✅
-- Outputs tab: all 6 values present ✅
 
 ### Step 2 — Console resource checklist
 
-Open the AWS Console in `us-east-1` and verify each resource:
+Open the AWS Console in `us-east-1`, account `800445863339`:
 
 | Service | Resource name | Expected state |
 |---------|--------------|----------------|
-| Cognito | `docuquery-user-pool-dev` | Active, email sign-in enabled |
-| API Gateway | `docuquery-api-dev` | 5 resources, Cognito authorizer attached |
+| Cognito | `docuquery-dev` | Active, email sign-in enabled |
+| API Gateway | `docuquery-dev` | 5 resources, Cognito authorizer attached, stage `dev` |
 | Lambda | `docuquery-upload-url-dev` | Active, ARM64, Node.js 20 |
-| Lambda | `docuquery-ingest-dev` | Active, 1 024 MB, 5-min timeout |
+| Lambda | `docuquery-ingest-dev` | Active, 1,024 MB, 5-min timeout |
 | Lambda | `docuquery-documents-dev` | Active |
-| Lambda | `docuquery-query-dev` | Active |
+| Lambda | `docuquery-query-dev` | Active, `KNOWLEDGE_BASE_ID=LPLGCWRHOM` |
 | Lambda | `docuquery-history-dev` | Active |
-| S3 | `docuquery-documents-*-dev` | Block Public Access: ON, SSE: AES256 |
-| DynamoDB | `docuquery-table-dev` | On-demand, 1 GSI |
+| S3 | `docuquerystack-documentbucketae41e5a9-y4e69bwevqic` | Block Public Access: ON, SSE: AES256 |
+| DynamoDB | `docuquery-dev` | On-demand, 1 GSI (`userId-createdAt-index`) |
 | CloudWatch | `/aws/lambda/docuquery-*-dev` | 5 log groups, retention: 30 days |
-| Amplify | `docuquery-dev` | App created |
+| Amplify | `d3m1ddehppkb04` | App created |
+| Bedrock KB | `LPLGCWRHOM` | Status: ACTIVE |
+| AOSS | `docuquery-vectors` | Status: ACTIVE |
 
-### Step 3 — API smoke tests
+### Step 3 — Verify Lambda environment variables
 
 ```bash
-API_URL="https://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/dev"
+aws lambda get-function-configuration --function-name docuquery-query-dev \
+  --region us-east-1 --profile flotech-demo-account \
+  --query "Environment.Variables" --output table
+# KNOWLEDGE_BASE_ID must be LPLGCWRHOM
+```
 
-# Should return 401 (auth is enforced — not 403 or 5xx)
+### Step 4 — API smoke tests
+
+```bash
+API_URL="https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev"
+
+# Should return 401 (auth enforced)
 curl -s -o /dev/null -w "%{http_code}" $API_URL/documents
 # Expected: 401
 
-# CORS preflight should succeed
-curl -X OPTIONS $API_URL/documents \
+# CORS preflight
+curl -X OPTIONS "$API_URL/documents" \
   -H "Origin: http://localhost:5173" \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: Authorization" \
   -v 2>&1 | grep "Access-Control"
-# Expected: Access-Control-Allow-Origin: http://localhost:5173
+# Expected: Access-Control-Allow-Origin header present
 ```
 
-### Step 4 — End-to-end test
+### Step 5 — End-to-end test
 
-1. Open the frontend (`npm run dev` or the Amplify URL)
-2. **Register** a new account using a real email address
-3. **Verify** your email using the 6-digit code
-4. **Sign in** — you should land on the Documents page
-5. **Upload** a text-based PDF (non-scanned works fastest)
-   - Watch the status badge: `uploaded → processing → ready`
-   - If stuck on `processing` after 3 minutes → check CloudWatch (see below)
-6. **Ask a question** about the document's content
-   - You should receive an answer within 10 seconds
-   - Citations should appear below the answer
+1. Start local frontend: `cd frontend && npm run dev` (runs at `http://localhost:5173`)
+2. **Register** a new account with a real email
+3. **Verify** via the 6-digit code sent to your inbox
+4. **Sign in** — lands on the Documents page
+5. **Upload** a text-based PDF
+   - Status badge: `uploaded → processing → ready`
+   - If stuck on `processing` after 3 minutes → check CloudWatch `/aws/lambda/docuquery-ingest-dev`
+6. **Ask** a question about the document content — response should arrive within 10 seconds
 7. **Click a citation** to expand the source passage
-8. **Navigate to History** — your question should appear
-
-### Step 5 — CloudWatch log verification
-
-Navigate to **CloudWatch → Log groups → `/aws/lambda/docuquery-ingest-dev`**
-
-A healthy ingestion log looks like:
-```json
-{"timestamp":"2024-11-15T10:23:41.123Z","functionName":"ingest-fn","userId":"abc123","operationType":"ingest:complete","durationMs":8420,"outcome":"success","chunkCount":24,"documentId":"uuid-v4"}
-```
-
-A failed ingestion will show `"outcome":"error"` with `errorMessage` and the step that failed.
+8. Navigate to **History** — the question should be listed
 
 ### Common issues and fixes
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| Document stuck on `processing` forever | Titan model invocation failed on first call | Check CloudWatch ingest logs for a Bedrock `AccessDeniedException`; re-invoke to trigger auto-enable |
-| `502` on `/query` endpoint | Claude 3 Haiku use case form not submitted | Open Bedrock console → Model access, complete the Anthropic use case form if prompted |
-| `401` on every API request | `VITE_API_URL` missing trailing slash | Ensure `.env` value ends with `/` |
-| Citations show empty `documentName` | Chunk metadata not stored correctly | Check `KNOWLEDGE_BASE_ID` env var on Lambda matches actual KB |
-| Frontend can't sign in | `VITE_USER_POOL_ID` or `VITE_USER_POOL_CLIENT_ID` incorrect | Copy exact values from CDK output |
-| Textract timeout | Very large scanned PDF | Increase `ingest-fn` timeout beyond 5 min in CDK |
+| Document stuck on `processing` | Titan invocation failed on first call | Check CloudWatch ingest logs for `AccessDeniedException`; re-upload to trigger retry |
+| `502` on `/query` | Claude 3 Haiku use case form needed | Open Bedrock console → check for Anthropic use case prompt; complete if shown |
+| `401` on every API request | `VITE_API_URL` missing trailing slash | Ensure `.env.local` value ends with `/` |
+| Citations show empty `documentName` | KB ID mismatch | Verify `KNOWLEDGE_BASE_ID` env var on all three Lambdas equals `LPLGCWRHOM` |
+| Frontend can't sign in | Wrong `VITE_USER_POOL_ID` or client ID | Use values from the [Deployed Resources](#deployed-resources) table above |
+| `cdk bootstrap` fails with EarlyValidation | Orphaned staging bucket | Empty + delete `cdk-hnb659fds-assets-800445863339-us-east-1`, delete stuck CDKToolkit stack, retry |
 
 ---
 
@@ -506,15 +734,15 @@ npm run dev
 # App runs at http://localhost:5173
 ```
 
-The frontend connects to the deployed AWS backend. Your `frontend/.env` must contain valid CDK output values. Lambda functions run in AWS — there is no local emulation.
+The frontend connects to the deployed AWS backend. Your `frontend/.env.local` must contain the live CDK output values. Lambda functions run in AWS — there is no local emulation.
 
 ```bash
-# frontend/.env (never commit this file)
-VITE_USER_POOL_ID=us-east-1_XXXXXXXXX
-VITE_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-VITE_IDENTITY_POOL_ID=us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-VITE_API_URL=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/dev/
-VITE_DOCUMENT_BUCKET_NAME=docuquery-documents-XXXXXXXXXXXX-us-east-1-dev
+# frontend/.env.local  ← this file is gitignored, never commit it
+VITE_USER_POOL_ID=us-east-1_mBss1Hu0l
+VITE_USER_POOL_CLIENT_ID=5jgr5ml0r123hmn2blj720r1du
+VITE_IDENTITY_POOL_ID=us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43
+VITE_API_URL=https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/
+VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-y4e69bwevqic
 ```
 
 ---
@@ -522,10 +750,10 @@ VITE_DOCUMENT_BUCKET_NAME=docuquery-documents-XXXXXXXXXXXX-us-east-1-dev
 ## Running Tests
 
 ```bash
-# Backend: 62 tests (5 unit suites + 5 property-based suites)
+# Backend: unit + property-based tests
 npm test --workspace=backend
 
-# CDK infrastructure: 16 assertion tests
+# CDK infrastructure assertions
 npm test --workspace=infra
 
 # Type-check all packages without building
@@ -553,9 +781,380 @@ The property-based tests use **fast-check** to verify 12 correctness properties:
 
 ---
 
+## CI/CD Pipeline
+
+Every push to `main` runs a fully automated deploy — no manual AWS console steps, no local `cdk deploy`, no manual KB setup. Two workflow files handle this:
+
+| File | Trigger | Purpose |
+|------|---------|---------|
+| `.github/workflows/ci.yml` | Pull requests to `main` | Lint, test, build, synth gate |
+| `.github/workflows/deploy.yml` | Push to `main` | Full end-to-end deploy |
+
+### Deploy pipeline stages
+
+```
+push to main
+     │
+     ▼
+[1] CI Gate ─────────── lint + all tests + frontend build + cdk synth
+     │
+     ▼
+[2] CDK Bootstrap ────── idempotent, safe to run on every push
+     │
+     ▼
+[3] CDK Deploy (pass 1) ─ creates all infrastructure (no KB ID yet)
+     │                     outputs: bucket name, API URL, Amplify App ID
+     ▼
+[4] Setup KB ────────────  Python script (infra/scripts/setup_kb.py)
+     │                     idempotent: creates AOSS collection, vector index,
+     │                     Bedrock KB, S3 data source — skips if already exists
+     │                     outputs: KB_ID
+     ▼
+[5] CDK Deploy (pass 2) ─ wires KB_ID into Lambda env vars + IAM policies
+     │
+     ▼
+[6] Amplify Build ───────  starts an Amplify release job, polls until SUCCEED
+                           frontend picks up all new API URLs automatically
+```
+
+The two-pass CDK deploy is required because the Knowledge Base ID isn't known until
+step 4 — you can't create the KB before the S3 bucket exists (step 3).
+
+### One-time setup: GitHub secrets and variables
+
+Go to your repository: **Settings → Secrets and variables → Actions**
+
+**Secrets** (encrypted, never visible after saving):
+
+| Name | Value |
+|------|-------|
+| `AWS_ACCESS_KEY_ID` | Access key ID for IAM user `flotech-demo-account` |
+| `AWS_SECRET_ACCESS_KEY` | Secret access key for the same user |
+| `AWS_ACCOUNT_ID` | `800445863339` |
+
+**Variables** (plaintext, visible in logs):
+
+| Name | Value |
+|------|-------|
+| `ENVIRONMENT` | `dev` |
+| `AWS_REGION` | `us-east-1` |
+
+The IAM user needs `AdministratorAccess` (or a custom policy covering CDK, Lambda, API GW, Cognito, S3, DynamoDB, Bedrock, AOSS, Amplify, IAM, CloudFormation).
+
+### What the `setup_kb.py` script does
+
+`infra/scripts/setup_kb.py` runs as part of step 4. It is **fully idempotent** — every
+operation checks whether the resource already exists before creating it:
+
+1. IAM role `docuquery-kb-role` (S3 + Bedrock embedding + AOSS permissions)
+2. AOSS encryption + network security policies
+3. AOSS `VECTORSEARCH` collection `docuquery-vectors` — waits for `ACTIVE`
+4. AOSS data access policy (grants KB role + GitHub Actions role index access)
+5. Vector index `docuquery-index` (1024-dim, HNSW/faiss) via signed HTTP PUT
+6. Bedrock Knowledge Base `docuquery-dev`
+7. S3 data source pointing at the CDK-created document bucket
+
+On subsequent deploys (e.g. a code change) the script detects all resources exist and
+completes in under 5 seconds.
+
+### Verify the pipeline
+
+After adding the secrets, push any commit to `main`:
+
+```
+https://github.com/florayuyuun123/docuquery-rag-assistant/actions
+```
+
+You should see the `Deploy` workflow run through all 6 stages in ~10 minutes total
+(most of the time is the AOSS collection creation on first run, which takes ~3 minutes).
+
+### Running CI locally (before pushing)
+
+```bash
+npm ci
+npm run build --workspace=shared
+
+npm run lint
+npm run format:check
+npm test --workspace=backend
+npm test --workspace=infra
+npm run typecheck --workspace=frontend
+npm run build --workspace=frontend
+
+cd infra
+npx cdk synth \
+  --profile flotech-demo-account \
+  --context environment=dev \
+  --context awsRegion=us-east-1 \
+  --context awsAccountId=800445863339 \
+  --context knowledgeBaseId=PLACEHOLDER \
+  --quiet
+```
+
+---
+
+## Manual Application Testing
+
+Walk through each feature of the live application. Run `npm run dev --workspace=frontend` or use the Amplify-hosted URL.
+
+**Before you start:** confirm `frontend/.env.local` has the values from [Deployed Resources](#deployed-resources).
+
+---
+
+### Test 1 — User registration and email verification
+
+**Goal:** Cognito sign-up flow works end-to-end.
+
+```
+1. Navigate to /signup
+2. Enter a real email and a password:
+   - 8+ characters, 1 uppercase, 1 lowercase, 1 digit, 1 symbol
+3. Click Register
+4. Check email for the 6-digit code
+5. Enter the code on /verify
+
+Expected:
+[x] Field-level password errors show in real time
+[x] Email arrives within 60 seconds
+[x] Wrong code shows "Invalid verification code" with a retry option
+[x] Correct code redirects to /signin
+```
+
+---
+
+### Test 2 — Sign in and session handling
+
+**Goal:** JWT auth and token refresh work correctly.
+
+```
+1. Sign in with the verified account from Test 1
+2. Open DevTools -> Application -> Local Storage
+   -> Cognito tokens present (keys prefixed CognitoIdentityServiceProvider)
+3. Sign out -> navigating to /documents redirects to /signin
+
+Expected:
+[x] Wrong credentials show "Authentication failed" (no field-level detail)
+[x] After sign-out, all protected routes redirect to /signin
+[x] Silent token refresh happens after 15 min — no forced redirect
+```
+
+---
+
+### Test 3 — Document upload (TXT / DOCX / native PDF)
+
+**Goal:** Upload flow, S3 pre-signed URL, and ingestion pipeline work.
+
+```
+1. Navigate to /documents
+2. Upload a TXT file under 20 MB
+3. Watch the status badge: uploaded -> processing -> ready
+   (typically 10–30 s for text files)
+4. Repeat with DOCX and a native (text-layer) PDF
+
+Expected:
+[x] File appears instantly with status "uploaded"
+[x] Status transitions to "processing" within a few seconds
+[x] Status reaches "ready" once ingestion completes
+[x] Unsupported file type (e.g. .xlsx) -> client-side error, no API call
+[x] File > 20 MB -> size error, no API call
+```
+
+**Check ingestion logs:**
+```bash
+aws logs tail /aws/lambda/docuquery-ingest-dev \
+  --region us-east-1 --profile flotech-demo-account --follow
+```
+Healthy log entry:
+```json
+{ "functionName":"ingest-fn", "operationType":"ingest:complete",
+  "outcome":"success", "chunkCount":24, "durationMs":8420 }
+```
+
+**Verify S3 and DynamoDB:**
+```bash
+# File in S3 under USER#{userId}/DOC#{documentId}/
+aws s3 ls s3://docuquerystack-documentbucketae41e5a9-y4e69bwevqic \
+  --recursive --profile flotech-demo-account
+
+# Record in DynamoDB with status=ready
+aws dynamodb query --table-name docuquery-dev --region us-east-1 \
+  --profile flotech-demo-account \
+  --key-condition-expression "PK = :pk" \
+  --expression-attribute-values '{":pk":{"S":"USER#<your-cognito-sub>"}}' \
+  --output table
+```
+
+---
+
+### Test 4 — Scanned PDF (Textract path)
+
+**Goal:** Textract fallback triggers for image-only PDFs.
+
+```
+1. Upload a scanned PDF (no embedded text layer)
+2. Status stays on "processing" longer — 30–90 s while Textract runs OCR
+
+Expected:
+[x] Status eventually reaches "ready" (not "failed")
+[x] CloudWatch shows "operationType":"textract:poll" entries during processing
+[x] chunkCount > 0 in the completion log
+```
+
+---
+
+### Test 5 — RAG query with citations
+
+**Goal:** Full retrieval + generation pipeline returns a grounded answer.
+
+```
+1. Ensure at least one document has status "ready"
+2. Navigate to /chat
+3. Ask a specific question whose answer is in the uploaded document
+
+Expected:
+[x] Answer appears (typically 2–8 seconds)
+[x] Citation panel shows below the answer
+[x] Each citation shows: document name and page number
+[x] Clicking a citation expands the verbatim passage
+[x] CloudWatch query log shows "isFallback":false
+```
+
+**Check query logs:**
+```bash
+aws logs tail /aws/lambda/docuquery-query-dev \
+  --region us-east-1 --profile flotech-demo-account --follow
+```
+Healthy log entry:
+```json
+{ "functionName":"query-fn", "operationType":"query:complete",
+  "outcome":"success", "isFallback":false, "citationCount":3, "durationMs":3210 }
+```
+
+---
+
+### Test 6 — Fallback (question not in documents)
+
+**Goal:** Threshold guard fires — Claude is never called for irrelevant questions.
+
+```
+1. With Document A uploaded, ask a completely unrelated question
+   e.g. "What is the capital of France?" (not in any uploaded doc)
+
+Expected:
+[x] Response: "I could not find the answer in your documents."
+[x] No citation panel
+[x] CloudWatch log shows "isFallback":true
+[x] No Bedrock Claude invocation in the log (no InvokeModel call for Claude)
+```
+
+---
+
+### Test 7 — No documents state
+
+**Goal:** Informational message returned before any Bedrock calls are made.
+
+```
+1. Delete all documents from /documents
+2. Navigate to /chat and ask any question
+
+Expected:
+[x] Response: "No documents are currently available to query."
+[x] No Bedrock calls at all (CloudWatch shows no log entry for this query)
+```
+
+---
+
+### Test 8 — Document deletion cascade
+
+**Goal:** Deleting a document removes it from S3, KB, and DynamoDB.
+
+```
+1. On /documents, click Delete on a "ready" document
+2. Confirm the item disappears from the list immediately (no page reload)
+
+Expected:
+[x] Item removed from UI
+[x] S3 object gone:
+    aws s3 ls s3://docuquerystack-documentbucketae41e5a9-y4e69bwevqic --recursive
+[x] DynamoDB record gone:
+    aws dynamodb get-item --table-name docuquery-dev --region us-east-1 ...
+[x] Querying that document's content now returns fallback
+```
+
+---
+
+### Test 9 — Chat history
+
+**Goal:** All queries persist and display in reverse-chronological order.
+
+```
+1. Ask 3–5 questions on /chat
+2. Navigate to /history
+
+Expected:
+[x] All questions appear, newest first
+[x] Each entry shows: question, answer, citations
+[x] History page shows at most 50 entries
+```
+
+**Verify in DynamoDB:**
+```bash
+aws dynamodb query --table-name docuquery-dev --region us-east-1 \
+  --profile flotech-demo-account \
+  --key-condition-expression "PK = :pk AND begins_with(SK, :sk)" \
+  --expression-attribute-values '{":pk":{"S":"USER#<sub>"},":sk":{"S":"CHAT#"}}' \
+  --output table
+```
+
+---
+
+### Test 10 — Per-user data isolation
+
+**Goal:** Users cannot see each other's documents or history.
+
+```
+1. Register a second account (User B, different email)
+2. Sign in as User B -> /documents must be empty (User A's docs not visible)
+3. Navigate to /history -> must be empty
+4. Sign back in as User A -> documents and history intact
+
+Expected:
+[x] Zero data leakage between accounts
+[x] API enforces userId filter at the DynamoDB and KB Retrieve level
+```
+
+---
+
+### Observability quick-reference
+
+```bash
+# Tail all five Lambda log groups (open in separate terminals)
+aws logs tail /aws/lambda/docuquery-upload-url-dev  --follow --profile flotech-demo-account --region us-east-1
+aws logs tail /aws/lambda/docuquery-ingest-dev      --follow --profile flotech-demo-account --region us-east-1
+aws logs tail /aws/lambda/docuquery-documents-dev   --follow --profile flotech-demo-account --region us-east-1
+aws logs tail /aws/lambda/docuquery-query-dev       --follow --profile flotech-demo-account --region us-east-1
+aws logs tail /aws/lambda/docuquery-history-dev     --follow --profile flotech-demo-account --region us-east-1
+
+# Search for errors in a log group
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/docuquery-ingest-dev \
+  --region us-east-1 --profile flotech-demo-account \
+  --filter-pattern '{ $.outcome = "error" }'
+
+# Trace a request by correlation ID
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/docuquery-query-dev \
+  --region us-east-1 --profile flotech-demo-account \
+  --filter-pattern '{ $.correlationId = "<id-here>" }'
+```
+
+---
+
+---
+
 ## Cost Breakdown
 
-This project is designed for low-cost learning and development. All services use pay-per-request pricing — there is no minimum fee.
+All services use pay-per-request pricing — no idle charges except the AOSS collection, which incurs OCU charges while active.
 
 | Service | Pricing basis | Est. cost at 100 queries/month |
 |---------|--------------|-------------------------------|
@@ -565,32 +1164,177 @@ This project is designed for low-cost learning and development. All services use
 | S3 (storage + requests) | $0.023/GB + $0.0004/1K requests | < $0.05 |
 | Cognito | Free ≤ 50,000 MAU | $0.00 |
 | Bedrock Titan Embeddings V2 | $0.0001 per 1K tokens | < $0.02 |
-| Bedrock Claude 3 Haiku | $0.00025/$0.00125 per 1K in/out | < $0.20 |
-| Bedrock KB + S3 Vectors | ~$0.005 per query | $0.50 |
+| Bedrock Claude 3 Haiku | $0.00025/$0.00125 per 1K in/out tokens | < $0.20 |
+| OpenSearch Serverless | OCU charges (~$0.24/OCU-hr, min 2 OCU) | ~$340/month at minimum |
 | CloudWatch Logs | $0.50/GB ingested | < $0.05 |
 | Amplify Hosting | $0.01/GB served | < $0.05 |
-| **Total** | | **< $1/month** |
 
-> ⚠️ Cost scales with document volume and query frequency. Monitor **AWS Cost Explorer** after deployment. The main cost driver at scale is Bedrock inference (Titan + Claude per query).
+> ⚠️ **The dominant cost driver in this deployment is OpenSearch Serverless**, which charges for compute capacity units (OCUs) regardless of query volume. For a production workload with continuous traffic this cost is justified, but for a dev/test environment consider deleting the AOSS collection and KB when not in use, and re-creating them for active testing sessions.
+>
+> Monitor **AWS Cost Explorer** after deployment and set a billing alert.
 
 ---
 
 ## Lessons Learned
 
-**1. S3 Vectors is a game-changer for budget-conscious RAG**
-OpenSearch Serverless' $700/month floor makes it impractical for learning projects. S3 Vectors changes the economics entirely. The trade-off (slightly higher latency) is irrelevant for document Q&A use cases.
+**1. CDK bootstrap can silently fail and leave orphaned resources**
+If the CDKToolkit stack ends up in `REVIEW_IN_PROGRESS` (never progressed past changeset creation), the staging bucket may still exist. Subsequent bootstrap attempts fail with `EarlyValidation` errors because the bucket name conflicts. Always check for stale buckets and stuck stacks before retrying.
 
 **2. The pre-signed URL pattern is non-negotiable for file uploads**
 Routing file uploads through a Lambda function wastes memory, adds latency, and costs more. The browser-to-S3 direct upload with pre-signed URLs is the right pattern — it also gives you native XHR upload progress events at no extra cost.
 
 **3. Property-based testing finds edge cases example-based tests miss**
-The tiktoken chunker worked correctly on all my handwritten test inputs. Fast-check found an off-by-one in the overlap calculation with a 201-character input that none of my examples triggered. Property-based testing for data transformation code is worth the setup cost.
+The tiktoken chunker worked correctly on all handwritten test inputs. Fast-check found an off-by-one in the overlap calculation with a specific input length that no example triggered. Property-based testing for data transformation code is worth the setup cost.
 
 **4. Anthropic model access requires a one-time use case submission for new accounts**
-AWS now auto-enables foundation models on first invocation, which is a big improvement. The catch is Anthropic specifically — Claude models may still require a brief use case form for first-time users. The failure is silent at deploy time (the CDK stack succeeds regardless), so the first symptom is a `502` on the `/query` endpoint. CloudWatch logs will show a Bedrock `AccessDeniedException` pointing directly at the issue. Complete the form in the Bedrock console once and it never needs to be revisited.
+AWS now auto-enables foundation models on first invocation, which is a significant improvement. The exception is Anthropic — Claude models may still require a brief use case form for first-time users. The failure is silent at deploy time (CDK succeeds regardless), so the first symptom is a `502` on the `/query` endpoint. CloudWatch logs will show a Bedrock `AccessDeniedException` pointing directly at the issue.
 
 **5. TypeScript strict mode catches real bugs at Lambda boundary**
 Lambda event types (`APIGatewayProxyEvent`) have deeply optional fields. Without strict mode, it's easy to write `event.body.question` and only discover the `null` dereference in production. Strict mode + nullish coalescing everywhere prevented several runtime errors.
+
+**6. Use boto3/Python for complex AWS CLI operations on Windows**
+PowerShell's string escaping makes deeply nested JSON arguments to AWS CLI commands unreliable on Windows — multi-level quotes frequently cause silent command cancellations. For operations like creating a Bedrock Knowledge Base (which requires nested JSON configs), writing a 10-line Python boto3 script is faster and more reliable than fighting PowerShell escaping.
+
+---
+
+## Cleanup
+
+The cleanup order matters because of resource dependencies. The CDK stack is the central step — and for the **dev** environment it now removes the S3 bucket, DynamoDB table, and Cognito User Pool automatically (see note below).
+
+> **Why `cdk destroy` handles everything in dev**
+>
+> The stack was updated so that stateful resources use `removalPolicy: DESTROY` when
+> `environment != 'prod'`. In a prod deployment those same resources use `RETAIN` to
+> protect real user data from accidental deletion. On dev, `cdk destroy` is a complete
+> teardown — no manual resource cleanup needed.
+
+---
+
+### Step 1 — Delete the Bedrock Knowledge Base and data source
+
+These live outside CloudFormation, so they are never touched by `cdk destroy`.
+
+```bash
+python - <<'PYEOF'
+import boto3
+session = boto3.Session(profile_name="flotech-demo-account", region_name="us-east-1")
+client = session.client("bedrock-agent")
+# Data source must be deleted before the KB
+client.delete_data_source(knowledgeBaseId="LPLGCWRHOM", dataSourceId="BIMFCFRPEH")
+print("Data source deleted")
+client.delete_knowledge_base(knowledgeBaseId="LPLGCWRHOM")
+print("Knowledge base deleted")
+PYEOF
+```
+
+### Step 2 — Delete the OpenSearch Serverless collection
+
+This is the dominant cost driver (~OCU charges). Delete it before the CDK stack — the
+KB IAM role (managed by CDK) is still present at this point and the delete will succeed.
+
+```bash
+# Delete the collection
+aws opensearchserverless delete-collection --id h04acuqvvvd64qsauu2k \
+  --region us-east-1 --profile flotech-demo-account
+
+# Wait ~60 seconds for deletion, then remove the associated policies
+aws opensearchserverless delete-access-policy --name docuquery-access --type data \
+  --region us-east-1 --profile flotech-demo-account
+aws opensearchserverless delete-security-policy --name docuquery-net --type network \
+  --region us-east-1 --profile flotech-demo-account
+aws opensearchserverless delete-security-policy --name docuquery-enc --type encryption \
+  --region us-east-1 --profile flotech-demo-account
+```
+
+### Step 3 — Delete the KB IAM role
+
+This role was created manually (not by CDK), so `cdk destroy` does not remove it.
+
+```bash
+aws iam delete-role-policy --role-name docuquery-kb-role --policy-name S3Access \
+  --profile flotech-demo-account
+aws iam delete-role-policy --role-name docuquery-kb-role --policy-name BedrockEmbeddingAccess \
+  --profile flotech-demo-account
+aws iam delete-role-policy --role-name docuquery-kb-role --policy-name AOSSAccess \
+  --profile flotech-demo-account
+aws iam delete-role --role-name docuquery-kb-role --profile flotech-demo-account
+```
+
+### Step 4 — Destroy the CDK stack
+
+On **dev** this removes everything the stack created: Lambda × 5, API Gateway, Amplify,
+IAM execution roles, CloudWatch log groups, **and** the S3 bucket, DynamoDB table, and
+Cognito User Pool (because `removalPolicy = DESTROY` for non-prod environments).
+
+```bash
+cd infra
+npx cdk destroy \
+  --profile flotech-demo-account \
+  --force \
+  --context environment=dev \
+  --context awsRegion=us-east-1 \
+  --context awsAccountId=800445863339 \
+  --context knowledgeBaseId=LPLGCWRHOM
+```
+
+> **Prod teardown:** If `--context environment=prod` is used, the S3 bucket, DynamoDB
+> table, and Cognito User Pool are retained after the stack is deleted. You would then
+> need to empty and delete them manually before all charges stop.
+
+### Step 5 — Delete the CDK bootstrap stack (optional)
+
+Only needed if you have no other CDK apps in this account/region.
+
+```bash
+# Empty the staging bucket first
+aws s3 rm s3://cdk-hnb659fds-assets-800445863339-us-east-1 \
+  --recursive --profile flotech-demo-account
+
+# Destroy the CDKToolkit stack
+aws cloudformation delete-stack --stack-name CDKToolkit \
+  --region us-east-1 --profile flotech-demo-account
+
+aws cloudformation wait stack-delete-complete --stack-name CDKToolkit \
+  --region us-east-1 --profile flotech-demo-account
+```
+
+### Step 6 — Verify everything is gone
+
+```bash
+# AOSS collection
+aws opensearchserverless list-collections \
+  --region us-east-1 --profile flotech-demo-account
+
+# Lambda functions
+aws lambda list-functions --region us-east-1 --profile flotech-demo-account \
+  --query "Functions[?starts_with(FunctionName,'docuquery')].FunctionName"
+
+# S3 buckets
+aws s3 ls --profile flotech-demo-account | grep docuquery
+
+# DynamoDB tables
+aws dynamodb list-tables --region us-east-1 --profile flotech-demo-account \
+  --query "TableNames[?starts_with(@,'docuquery')]"
+
+# Bedrock Knowledge Bases
+aws bedrock-agent list-knowledge-bases --region us-east-1 --profile flotech-demo-account \
+  --query "knowledgeBaseSummaries[].{Name:name,Status:status}"
+```
+
+All five commands should return empty results. Check **AWS Cost Explorer** the next day
+to confirm no `DocuQuery`-tagged charges are accruing.
+
+### Cleanup order summary
+
+| Order | Resource | Created by | Deleted by |
+|-------|----------|-----------|------------|
+| 1 | KB data source `BIMFCFRPEH` | Manual (boto3) | Manual (boto3) — must go before KB |
+| 2 | Knowledge Base `LPLGCWRHOM` | Manual (boto3) | Manual (boto3) — must go before AOSS |
+| 3 | AOSS collection `docuquery-vectors` | Manual (CLI) | Manual (CLI) — main cost driver |
+| 4 | AOSS policies (access, network, encryption) | Manual (CLI) | Manual (CLI) — after collection |
+| 5 | KB IAM role `docuquery-kb-role` | Manual (CLI) | Manual (CLI) — not in CDK |
+| 6 | Everything else (Lambda, API GW, Amplify, S3, DDB, Cognito…) | CDK | `cdk destroy` (dev auto-deletes stateful resources) |
+| 7 | CDKToolkit stack | CDK bootstrap | Optional — only if no other CDK apps |
 
 ---
 
@@ -601,8 +1345,6 @@ The draw.io file at `docs/architecture.drawio` uses official AWS shape libraries
 - VS Code with the [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio) extension
 - JetBrains IDEs with the Draw.io plugin
 
-Export it as PNG/SVG from diagrams.net for use in blog posts and presentations.
-
 ---
 
 ## License
@@ -611,5 +1353,4 @@ MIT — use, modify, and redistribute freely. Attribution appreciated but not re
 
 ---
 
-*Built with [Amazon Bedrock](https://aws.amazon.com/bedrock/), [AWS CDK](https://aws.amazon.com/cdk/), and a healthy skepticism of $700/month vector databases.*
-
+*Built with [Amazon Bedrock](https://aws.amazon.com/bedrock/), [AWS CDK](https://aws.amazon.com/cdk/), and [OpenSearch Serverless](https://aws.amazon.com/opensearch-service/features/serverless/) on AWS account `800445863339`.*

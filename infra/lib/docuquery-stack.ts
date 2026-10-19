@@ -1,4 +1,4 @@
-import * as cdk from 'aws-cdk-lib';
+﻿import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -15,6 +15,10 @@ export interface DocuQueryStackProps extends cdk.StackProps {
   allowedOrigins: string;
   environment: string;
   knowledgeBaseId?: string;
+  /** GitHub repo URL e.g. https://github.com/org/repo */
+  repoUrl?: string;
+  /** Git branch to deploy via Amplify e.g. main */
+  branch?: string;
 }
 
 export class DocuQueryStack extends cdk.Stack {
@@ -37,6 +41,12 @@ export class DocuQueryStack extends cdk.Stack {
       ? `arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/${props.knowledgeBaseId}`
       : `arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/*`;
 
+    // Stateful resources use DESTROY in dev so cdk destroy cleans up everything.
+    // In prod, RETAIN protects data against accidental stack deletion.
+    const removalPolicy = props.environment === 'prod'
+      ? cdk.RemovalPolicy.RETAIN
+      : cdk.RemovalPolicy.DESTROY;
+
     // ── Cognito ───────────────────────────────────────────────────────────────
     const userPool = new cognito.UserPool(this, 'UserPool', {
       userPoolName: `docuquery-${props.environment}`,
@@ -51,7 +61,7 @@ export class DocuQueryStack extends cdk.Stack {
         requireSymbols: true,
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy,
     });
 
     const userPoolClient = userPool.addClient('WebClient', {
@@ -82,7 +92,7 @@ export class DocuQueryStack extends cdk.Stack {
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy,
     });
 
     table.addGlobalSecondaryIndex({
@@ -99,7 +109,7 @@ export class DocuQueryStack extends cdk.Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: false,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy,
       cors: [{
         allowedMethods: [s3.HttpMethods.PUT],
         allowedOrigins: [props.allowedOrigins],
@@ -307,6 +317,7 @@ export class DocuQueryStack extends cdk.Stack {
     // ── Amplify Hosting ───────────────────────────────────────────────────────
     const amplifyApp = new amplify.CfnApp(this, 'AmplifyApp', {
       name: `docuquery-${props.environment}`,
+      ...(props.repoUrl && { repository: props.repoUrl }),
       buildSpec: JSON.stringify({
         version: 1,
         frontend: {

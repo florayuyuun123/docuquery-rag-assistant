@@ -1,0 +1,115 @@
+# .github/workflows/ci.yml
+#
+# PR gate — runs on pull requests to main only.
+# Verifies everything compiles, lints, and all tests pass before merge.
+# Actual deployment is handled by deploy.yml on push to main.
+#
+# Required GitHub secrets:
+#   AWS_ACCESS_KEY_ID      - for the cdk-synth job
+#   AWS_SECRET_ACCESS_KEY
+#   AWS_ACCOUNT_ID         - 800445863339
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+  AWS_REGION:   us-east-1
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=shared
+      - run: npm run lint
+      - run: npm run format:check
+
+  test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=shared
+      - run: npm test --workspace=backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
+
+  infra-test:
+    name: CDK Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=shared
+      - run: npm test --workspace=infra
+
+  build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=shared
+      - run: npm run typecheck --workspace=frontend
+      - name: Vite production build
+        run: npm run build --workspace=frontend
+        env:
+          VITE_USER_POOL_ID:         us-east-1_placeholder
+          VITE_USER_POOL_CLIENT_ID:  placeholder
+          VITE_IDENTITY_POOL_ID:     us-east-1:placeholder
+          VITE_API_URL:              https://placeholder.execute-api.us-east-1.amazonaws.com/dev/
+          VITE_DOCUMENT_BUCKET_NAME: placeholder-bucket
+
+  cdk-synth:
+    name: CDK Synth
+    runs-on: ubuntu-latest
+    needs: [test, infra-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+      - run: npm ci
+      - run: npm run build --workspace=shared
+      - name: CDK synth
+        working-directory: infra
+        run: |
+          npx cdk synth \
+            --context environment=dev \
+            --context awsRegion=us-east-1 \
+            --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
+            --context knowledgeBaseId=PLACEHOLDER \
+            --quiet

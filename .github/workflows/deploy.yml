@@ -1,0 +1,276 @@
+# .github/workflows/deploy.yml
+#
+# Full CD pipeline — triggers on every push to main.
+#
+# Pipeline stages:
+#   1. ci         Run all tests and build checks (reuses ci.yml logic)
+#   2. bootstrap  CDK bootstrap (idempotent — safe every run)
+#   3. deploy-1   CDK deploy pass 1: create all AWS resources (no KB ID yet)
+#   4. setup-kb   Provision AOSS collection + Bedrock KB (idempotent Python script)
+#   5. deploy-2   CDK deploy pass 2: wire KB ID into Lambda env + IAM policies
+#   6. amplify    Trigger Amplify branch build so frontend picks up new API URL
+#
+# Required GitHub secrets (Settings -> Secrets -> Actions):
+#   AWS_ACCESS_KEY_ID      IAM user access key (needs AdministratorAccess or custom policy)
+#   AWS_SECRET_ACCESS_KEY  Matching secret key
+#   AWS_ACCOUNT_ID         800445863339
+#
+# Optional GitHub variables (Settings -> Variables -> Actions):
+#   ENVIRONMENT            dev (default)
+#   AWS_REGION             us-east-1 (default)
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a running deploy mid-flight
+
+env:
+  NODE_VERSION: "20"
+  AWS_REGION:   ${{ vars.AWS_REGION || 'us-east-1' }}
+  ENVIRONMENT:  ${{ vars.ENVIRONMENT || 'dev' }}
+
+jobs:
+  # ── 1. CI gate ─────────────────────────────────────────────────────────────
+  ci:
+    name: CI Gate (lint + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=shared
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Backend tests
+        run: npm test --workspace=backend
+
+      - name: CDK tests
+        run: npm test --workspace=infra
+
+      - name: Frontend typecheck + build
+        run: |
+          npm run typecheck --workspace=frontend
+          npm run build --workspace=frontend
+        env:
+          VITE_USER_POOL_ID:          us-east-1_placeholder
+          VITE_USER_POOL_CLIENT_ID:   placeholder
+          VITE_IDENTITY_POOL_ID:      us-east-1:placeholder
+          VITE_API_URL:               https://placeholder.execute-api.us-east-1.amazonaws.com/dev/
+          VITE_DOCUMENT_BUCKET_NAME:  placeholder-bucket
+
+  # ── 2. CDK bootstrap ───────────────────────────────────────────────────────
+  bootstrap:
+    name: CDK Bootstrap
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: CDK bootstrap (idempotent)
+        working-directory: infra
+        run: |
+          npx cdk bootstrap \
+            aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.AWS_REGION }}
+
+  # ── 3. CDK deploy pass 1 — provision all infrastructure ───────────────────
+  deploy-infra:
+    name: CDK Deploy (pass 1 — infrastructure)
+    runs-on: ubuntu-latest
+    needs: bootstrap
+    outputs:
+      bucket_name: ${{ steps.outputs.outputs.bucket_name }}
+      api_url:     ${{ steps.outputs.outputs.api_url }}
+      amplify_app_id: ${{ steps.outputs.outputs.amplify_app_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=shared
+
+      - name: CDK deploy
+        working-directory: infra
+        run: |
+          npx cdk deploy \
+            --require-approval never \
+            --context environment=${{ env.ENVIRONMENT }} \
+            --context awsRegion=${{ env.AWS_REGION }} \
+            --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
+            --outputs-file ../cdk-outputs.json
+
+      - name: Parse CDK outputs
+        id: outputs
+        run: |
+          BUCKET=$(jq -r '.DocuQueryStack.DocumentBucketName' cdk-outputs.json)
+          API=$(jq -r '.DocuQueryStack.ApiGatewayUrl' cdk-outputs.json)
+          AMPLIFY=$(jq -r '.DocuQueryStack.AmplifyAppId' cdk-outputs.json)
+          echo "bucket_name=$BUCKET" >> $GITHUB_OUTPUT
+          echo "api_url=$API"        >> $GITHUB_OUTPUT
+          echo "amplify_app_id=$AMPLIFY" >> $GITHUB_OUTPUT
+          echo "Bucket: $BUCKET"
+          echo "API URL: $API"
+          echo "Amplify App: $AMPLIFY"
+
+      - name: Upload CDK outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-outputs
+          path: cdk-outputs.json
+          retention-days: 1
+
+  # ── 4. Provision AOSS + Bedrock Knowledge Base ─────────────────────────────
+  setup-kb:
+    name: Provision AOSS + Knowledge Base
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+    outputs:
+      kb_id: ${{ steps.kb.outputs.KB_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install boto3 requests
+
+      - name: Run KB setup script
+        id: kb
+        env:
+          AWS_REGION:      ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID:  ${{ secrets.AWS_ACCOUNT_ID }}
+          ENVIRONMENT:     ${{ env.ENVIRONMENT }}
+          BUCKET_NAME:     ${{ needs.deploy-infra.outputs.bucket_name }}
+        run: python infra/scripts/setup_kb.py
+
+  # ── 5. CDK deploy pass 2 — wire KB ID into Lambda env + IAM ───────────────
+  deploy-with-kb:
+    name: CDK Deploy (pass 2 — wire Knowledge Base)
+    runs-on: ubuntu-latest
+    needs: [deploy-infra, setup-kb]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=shared
+
+      - name: CDK deploy with KB ID
+        working-directory: infra
+        run: |
+          npx cdk deploy \
+            --require-approval never \
+            --context environment=${{ env.ENVIRONMENT }} \
+            --context awsRegion=${{ env.AWS_REGION }} \
+            --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
+            --context knowledgeBaseId=${{ needs.setup-kb.outputs.kb_id }}
+
+  # ── 6. Trigger Amplify build ───────────────────────────────────────────────
+  amplify-deploy:
+    name: Trigger Amplify Build
+    runs-on: ubuntu-latest
+    needs: [deploy-infra, deploy-with-kb]
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Start Amplify job
+        env:
+          AMPLIFY_APP_ID: ${{ needs.deploy-infra.outputs.amplify_app_id }}
+        run: |
+          # Start a build on the main branch
+          JOB=$(aws amplify start-job \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name main \
+            --job-type RELEASE \
+            --query 'jobSummary.jobId' \
+            --output text)
+          echo "Amplify job started: $JOB"
+
+          # Poll until SUCCEED or FAILED (max 10 min)
+          for i in $(seq 1 30); do
+            STATUS=$(aws amplify get-job \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name main \
+              --job-id "$JOB" \
+              --query 'job.summary.status' \
+              --output text)
+            echo "  [$i/30] Amplify status: $STATUS"
+            if [ "$STATUS" = "SUCCEED" ]; then
+              echo "Amplify build succeeded."
+              exit 0
+            elif [ "$STATUS" = "FAILED" ]; then
+              echo "Amplify build FAILED."
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "Amplify build timed out after 10 minutes."
+          exit 1
