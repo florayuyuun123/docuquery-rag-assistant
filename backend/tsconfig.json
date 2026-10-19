@@ -4,7 +4,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@docuquery/shared": ["../shared/src/index.ts"]
+      "@docuquery/shared": ["../shared/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*"],

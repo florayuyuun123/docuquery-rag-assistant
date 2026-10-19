@@ -1,11 +1,11 @@
-import type { Config } from 'jest';
-
-const config: Config = {
+/** @type {import('jest').Config} */
+const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   rootDir: '.',
-  testMatch: ['<rootDir>/src/**/*.test.ts', '<rootDir>/test/**/*.test.ts'],
+  testMatch: ['<rootDir>/test/**/*.test.ts'],
   moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@docuquery/shared$': '<rootDir>/../shared/src/index.ts',
   },
   transform: {
@@ -13,11 +13,14 @@ const config: Config = {
       'ts-jest',
       {
         tsconfig: {
-          extends: '../tsconfig.base.json',
-          compilerOptions: {
-            module: 'CommonJS',
-            moduleResolution: 'node',
-          },
+          target: 'ES2022',
+          module: 'CommonJS',
+          moduleResolution: 'node',
+          esModuleInterop: true,
+          strict: true,
+          skipLibCheck: true,
+          resolveJsonModule: true,
+          lib: ['ES2022'],
         },
       },
     ],
@@ -27,4 +30,4 @@ const config: Config = {
   coverageDirectory: 'coverage',
 };
 
-export default config;
+module.exports = config;

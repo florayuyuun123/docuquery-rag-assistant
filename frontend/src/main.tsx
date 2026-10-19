@@ -1,15 +1,15 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { configureAmplify } from './amplifyConfigure';
+import { App } from './App';
 
-import App from './App.js';
+configureAmplify();
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found. Ensure index.html has <div id="root">.');
-}
+const root = document.getElementById('root');
+if (!root) throw new Error('Root element not found');
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
+createRoot(root).render(
+  <StrictMode>
     <App />
-  </React.StrictMode>,
+  </StrictMode>,
 );

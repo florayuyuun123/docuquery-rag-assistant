@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1650" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1280" math="0" shadow="1">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <!-- =========================================================
+         TITLE
+    ========================================================= -->
+    <mxCell id="title-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#232F3E;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="40" y="20" width="1840" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="title-text" value="DocuQuery — RAG-Powered Document Q&amp;A on AWS" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#FFFFFF;" vertex="1" parent="1">
+      <mxGeometry x="40" y="20" width="1840" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="subtitle-text" value="Serverless · Bedrock Knowledge Bases · S3 Vectors · CDK TypeScript · React" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#FF9900;" vertex="1" parent="1">
+      <mxGeometry x="40" y="80" width="1840" height="24" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         ROW 1 — FRONTEND + AUTH + API
+    ========================================================= -->
+
+    <!-- ── Frontend zone ── -->
+    <mxCell id="z-frontend" value="Frontend" style="swimlane;startSize=30;fillColor=#E6F2F8;strokeColor=#147EBA;fontStyle=1;fontSize=12;fontColor=#147EBA;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="130" width="340" height="170" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-user" value="End User" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#232F3E;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.general.user;" vertex="1" parent="z-frontend">
+      <mxGeometry x="30" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-amplify" value="AWS Amplify&#xa;(Hosting + CI/CD)" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.front_end_web_mobile.aws_amplify;" vertex="1" parent="z-frontend">
+      <mxGeometry x="165" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-react" value="React 18 + TypeScript + Vite" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#555;" vertex="1" parent="z-frontend">
+      <mxGeometry x="10" y="138" width="320" height="20" as="geometry"/>
+    </mxCell>
+
+    <!-- ── Auth zone ── -->
+    <mxCell id="z-auth" value="Authentication &amp; Authorization" style="swimlane;startSize=30;fillColor=#FDF3F4;strokeColor=#DD344C;fontStyle=1;fontSize=12;fontColor=#DD344C;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="420" y="130" width="360" height="170" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-cognito-up" value="Cognito User Pool&#xa;email/password&#xa;15-min access token" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#DD344C;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.security_identity_compliance.amazon_cognito;" vertex="1" parent="z-auth">
+      <mxGeometry x="35" y="55" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-cognito-ip" value="Cognito Identity Pool&#xa;Federated identity&#xa;for service access" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#DD344C;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.security_identity_compliance.amazon_cognito;" vertex="1" parent="z-auth">
+      <mxGeometry x="210" y="55" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-auth" value="Password policy · Account lockout · Email verification" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#555;" vertex="1" parent="z-auth">
+      <mxGeometry x="10" y="138" width="340" height="20" as="geometry"/>
+    </mxCell>
+
+    <!-- ── API zone ── -->
+    <mxCell id="z-api" value="API Layer" style="swimlane;startSize=30;fillColor=#F4EEFF;strokeColor=#8C4FFF;fontStyle=1;fontSize=12;fontColor=#8C4FFF;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="820" y="130" width="280" height="170" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-apigw" value="Amazon API Gateway&#xa;REST API&#xa;Cognito JWT Authorizer" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#8C4FFF;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.app_integration.amazon_api_gateway;" vertex="1" parent="z-api">
+      <mxGeometry x="116" y="55" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-api" value="5 routes · CORS · Request validation · Throttling" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#555;" vertex="1" parent="z-api">
+      <mxGeometry x="10" y="138" width="260" height="20" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         ROW 2 — LAMBDA FUNCTIONS (full width)
+    ========================================================= -->
+    <mxCell id="z-lambda" value="AWS Lambda Functions  ·  Node.js 20.x  ·  ARM64  ·  Per-function least-privilege IAM roles  ·  30-day CloudWatch log groups" style="swimlane;startSize=30;fillColor=#FEF0F8;strokeColor=#E7157B;fontStyle=1;fontSize=12;fontColor=#E7157B;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="360" width="1840" height="200" as="geometry"/>
+    </mxCell>
+
+    <!-- upload-url-fn -->
+    <mxCell id="z-fn-upload" value="upload-url-fn" style="swimlane;startSize=20;fillColor=#FFDAF2;strokeColor=#E7157B;fontSize=10;fontStyle=1;" vertex="1" parent="z-lambda">
+      <mxGeometry x="20" y="40" width="300" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-fn-upload" value="POST /documents/upload-url" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.compute.aws_lambda;" vertex="1" parent="z-fn-upload">
+      <mxGeometry x="126" y="30" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-fn-upload" value="Validates MIME type + size&#xa;Generates pre-signed S3 URL&#xa;Creates DDB record (status=uploaded)" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#444;" vertex="1" parent="z-fn-upload">
+      <mxGeometry x="5" y="90" width="290" height="40" as="geometry"/>
+    </mxCell>
+
+    <!-- documents-fn -->
+    <mxCell id="z-fn-docs" value="documents-fn" style="swimlane;startSize=20;fillColor=#FFDAF2;strokeColor=#E7157B;fontSize=10;fontStyle=1;" vertex="1" parent="z-lambda">
+      <mxGeometry x="340" y="40" width="300" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-fn-docs" value="GET + DELETE /documents" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.compute.aws_lambda;" vertex="1" parent="z-fn-docs">
+      <mxGeometry x="126" y="30" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-fn-docs" value="List documents (per-user scoped)&#xa;Delete: S3 → KB → DynamoDB cascade&#xa;403 on cross-user access" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#444;" vertex="1" parent="z-fn-docs">
+      <mxGeometry x="5" y="90" width="290" height="40" as="geometry"/>
+    </mxCell>
+
+    <!-- ingest-fn -->
+    <mxCell id="z-fn-ingest" value="ingest-fn  (S3 ObjectCreated trigger · no retry)" style="swimlane;startSize=20;fillColor=#FFDAF2;strokeColor=#E7157B;fontSize=10;fontStyle=1;" vertex="1" parent="z-lambda">
+      <mxGeometry x="660" y="40" width="360" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-fn-ingest" value="Ingestion Pipeline&#xa;Extract → Chunk → Embed → Index" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.compute.aws_lambda;" vertex="1" parent="z-fn-ingest">
+      <mxGeometry x="156" y="30" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-fn-ingest" value="PDF(text layer) → DOCX(mammoth) → TXT(UTF-8)&#xa;Textract OCR fallback · tiktoken chunking (1000/200)&#xa;On error: rollback KB, status=failed, log correlation ID" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#444;" vertex="1" parent="z-fn-ingest">
+      <mxGeometry x="5" y="90" width="350" height="40" as="geometry"/>
+    </mxCell>
+
+    <!-- query-fn -->
+    <mxCell id="z-fn-query" value="query-fn  (RAG Core)" style="swimlane;startSize=20;fillColor=#FFDAF2;strokeColor=#E7157B;fontSize=10;fontStyle=1;" vertex="1" parent="z-lambda">
+      <mxGeometry x="1040" y="40" width="400" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-fn-query" value="POST /query" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.compute.aws_lambda;" vertex="1" parent="z-fn-query">
+      <mxGeometry x="176" y="30" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-fn-query" value="KB.Retrieve (userId filter, top-5) → threshold check&#xa;Fallback if score &lt; 0.5 or no ready docs&#xa;Claude 3 Haiku (10s timeout) → assemble citations" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#444;" vertex="1" parent="z-fn-query">
+      <mxGeometry x="5" y="90" width="390" height="40" as="geometry"/>
+    </mxCell>
+
+    <!-- history-fn -->
+    <mxCell id="z-fn-history" value="history-fn" style="swimlane;startSize=20;fillColor=#FFDAF2;strokeColor=#E7157B;fontSize=10;fontStyle=1;" vertex="1" parent="z-lambda">
+      <mxGeometry x="1460" y="40" width="360" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-fn-history" value="GET /history" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.compute.aws_lambda;" vertex="1" parent="z-fn-history">
+      <mxGeometry x="156" y="30" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-fn-history" value="Query DynamoDB CHAT# prefix&#xa;ScanIndexForward=false · Limit=50&#xa;Returns full citation data per entry" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#444;" vertex="1" parent="z-fn-history">
+      <mxGeometry x="5" y="90" width="350" height="40" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         ROW 3 — STORAGE + AI/ML + OBSERVABILITY
+    ========================================================= -->
+
+    <!-- Storage zone -->
+    <mxCell id="z-storage" value="Storage" style="swimlane;startSize=30;fillColor=#EBF6E6;strokeColor=#3F8624;fontStyle=1;fontSize=12;fontColor=#3F8624;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="620" width="680" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-s3" value="Amazon S3&#xa;Document Store&#xa;SSE-S3 · Block Public Access&#xa;Key: USER#{id}/DOC#{id}/{file}" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#3F8624;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.storage.amazon_simple_storage_service_s3;" vertex="1" parent="z-storage">
+      <mxGeometry x="90" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-dynamo" value="Amazon DynamoDB&#xa;Single-Table Design&#xa;On-Demand · AWS-Managed Keys&#xa;PK=USER# SK=DOC# or CHAT#" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#3F8624;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.database.amazon_dynamodb;" vertex="1" parent="z-storage">
+      <mxGeometry x="450" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-s3-detail" value="CORS: Amplify domain only · No Lambda proxy&#xa;Upload via pre-signed URL (browser → S3 direct)" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#555;" vertex="1" parent="z-storage">
+      <mxGeometry x="10" y="160" width="310" height="40" as="geometry"/>
+    </mxCell>
+    <mxCell id="lbl-ddb-detail" value="GSI: userId-createdAt-index&#xa;Chat records include full citation JSON" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#555;" vertex="1" parent="z-storage">
+      <mxGeometry x="360" y="160" width="300" height="40" as="geometry"/>
+    </mxCell>
+
+    <!-- AI/ML zone -->
+    <mxCell id="z-ai" value="AI / ML  ·  Amazon Bedrock" style="swimlane;startSize=30;fillColor=#E1F5F3;strokeColor=#01A88D;fontStyle=1;fontSize=12;fontColor=#01A88D;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="760" y="620" width="860" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-kb" value="Bedrock Knowledge Base&#xa;S3 Vectors backend&#xa;Per-user metadata filter&#xa;pay-per-request (not OpenSearch)" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#01A88D;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.machine_learning.amazon_bedrock;" vertex="1" parent="z-ai">
+      <mxGeometry x="60" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-titan" value="Titan Embeddings V2&#xa;1024-dim vectors&#xa;up to 8 192 token input" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#01A88D;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.machine_learning.amazon_bedrock;" vertex="1" parent="z-ai">
+      <mxGeometry x="310" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-claude" value="Claude 3 Haiku&#xa;Grounded answers only&#xa;AbortController 10 s timeout&#xa;→ HTTP 504 on breach" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#01A88D;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.machine_learning.amazon_bedrock;" vertex="1" parent="z-ai">
+      <mxGeometry x="560" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-textract" value="Amazon Textract&#xa;OCR for scanned PDFs&#xa;StartDocumentTextDetection&#xa;+ async polling" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#01A88D;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.machine_learning.amazon_textract;" vertex="1" parent="z-ai">
+      <mxGeometry x="740" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+
+    <!-- Observability zone -->
+    <mxCell id="z-obs" value="Observability" style="swimlane;startSize=30;fillColor=#FDF3F0;strokeColor=#E05C00;fontStyle=1;fontSize=12;fontColor=#E05C00;whiteSpace=wrap;horizontal=1;" vertex="1" parent="1">
+      <mxGeometry x="1660" y="620" width="220" height="220" as="geometry"/>
+    </mxCell>
+    <mxCell id="ic-cw" value="Amazon CloudWatch&#xa;Structured JSON logs&#xa;30-day retention&#xa;Correlation IDs" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E05C00;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.awslib.management_governance.amazon_cloudwatch;" vertex="1" parent="z-obs">
+      <mxGeometry x="86" y="60" width="48" height="48" as="geometry"/>
+    </mxCell>
+
+    <!-- IaC banner -->
+    <mxCell id="z-iac" value="Infrastructure as Code — AWS CDK v2 TypeScript (L2/L3 constructs)  ·  Single deployable stack  ·  Per-Lambda least-privilege IAM (no wildcard resources)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;fontStyle=2;fontColor=#333;" vertex="1" parent="1">
+      <mxGeometry x="40" y="870" width="1840" height="34" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         EDGES — Row 1 interconnects
+    ========================================================= -->
+    <!-- User → Amplify (SPA) -->
+    <mxCell id="e-user-amp" value="Opens app" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-user" target="ic-amplify" parent="z-frontend">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- React → Cognito (sign-in/up) -->
+    <mxCell id="e-react-cog" value="Sign-up / Sign-in&#xa;Email verification" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" source="ic-amplify" target="ic-cognito-up" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- React → API GW -->
+    <mxCell id="e-react-api" value="HTTPS + JWT Bearer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-amplify" target="ic-apigw" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Cognito → API GW (validates JWT) -->
+    <mxCell id="e-cog-api" value="Validates JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;dashed=1;strokeColor=#DD344C;" edge="1" source="ic-cognito-up" target="ic-apigw" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         EDGES — API GW → Lambda
+    ========================================================= -->
+    <mxCell id="e-api-upload" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-apigw" target="ic-fn-upload" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-api-docs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-apigw" target="ic-fn-docs" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-api-query" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-apigw" target="ic-fn-query" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-api-history" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-apigw" target="ic-fn-history" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Browser → S3 direct upload (dashed green) -->
+    <mxCell id="e-browser-s3" value="PUT (pre-signed URL)&#xa;browser → S3 direct" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;dashed=1;strokeColor=#3F8624;strokeWidth=2;" edge="1" source="ic-amplify" target="ic-s3" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         EDGES — Lambda → Storage
+    ========================================================= -->
+    <!-- upload-fn → S3 + DDB -->
+    <mxCell id="e-upload-s3" value="GetSignedUrl" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-upload" target="ic-s3" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-upload-ddb" value="PutItem&#xa;status=uploaded" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-upload" target="ic-dynamo" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- S3 ObjectCreated → ingest-fn (bold orange) -->
+    <mxCell id="e-s3-ingest" value="ObjectCreated event" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;strokeColor=#FF9900;strokeWidth=3;fontStyle=1;" edge="1" source="ic-s3" target="ic-fn-ingest" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- ingest-fn → Textract / Titan / KB / DDB -->
+    <mxCell id="e-ingest-textract" value="OCR fallback" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-ingest" target="ic-textract" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-ingest-titan" value="Embed chunks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-ingest" target="ic-titan" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-ingest-kb" value="StartIngestionJob" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-ingest" target="ic-kb" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-ingest-ddb" value="UpdateItem status" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-ingest" target="ic-dynamo" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- docs-fn → S3 / KB / DDB -->
+    <mxCell id="e-docs-s3" value="DeleteObject" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-docs" target="ic-s3" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-docs-kb" value="Delete chunks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-docs" target="ic-kb" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-docs-ddb" value="Query / DeleteItem" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-docs" target="ic-dynamo" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- query-fn → KB / Claude / DDB -->
+    <mxCell id="e-query-kb" value="Retrieve (userId filter, top-5)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-query" target="ic-kb" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-query-claude" value="InvokeModel&#xa;(grounded prompt)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-query" target="ic-claude" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-query-ddb" value="PutItem (chat record)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-query" target="ic-dynamo" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- history-fn → DDB -->
+    <mxCell id="e-hist-ddb" value="Query CHAT# prefix" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" edge="1" source="ic-fn-history" target="ic-dynamo" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- All Lambdas → CloudWatch (dashed) -->
+    <mxCell id="e-lambda-cw" value="Structured JSON logs&#xa;+ correlation IDs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;dashed=1;strokeColor=#E05C00;" edge="1" source="ic-fn-ingest" target="ic-cw" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+  </root>
+</mxGraphModel>

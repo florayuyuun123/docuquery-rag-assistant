@@ -8,7 +8,6 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "outDir": "dist",
-    "rootDir": "src",
     "noEmit": true,
     "paths": {
       "@docuquery/shared": ["../shared/src/index.ts"]
