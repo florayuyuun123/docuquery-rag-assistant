@@ -15,7 +15,7 @@
 #   AWS_ACCESS_KEY_ID       IAM access key for flotech-demo-account
 #   AWS_SECRET_ACCESS_KEY   Matching secret key
 #   AWS_ACCOUNT_ID          800445863339
-#   GITHUB_PAT              GitHub Personal Access Token (classic, repo scope)
+#   GH_PAT              GitHub Personal Access Token (classic, repo scope)
 #                           Create at: https://github.com/settings/tokens
 #                           Needed once to connect Amplify to the GitHub repo.
 #
@@ -81,10 +81,15 @@ jobs:
           VITE_DOCUMENT_BUCKET_NAME:  placeholder-bucket
 
   # ── 2. Connect Amplify to GitHub (idempotent) ──────────────────────────────
+  # Requires the GH_PAT secret to be set (Settings -> Secrets -> Actions).
+  # If the secret is missing the step is skipped gracefully — the rest of the
+  # pipeline (CDK deploy, Amplify monitor) continues unaffected.
   connect-amplify:
     name: Connect Amplify to GitHub
     runs-on: ubuntu-latest
     needs: ci
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -94,6 +99,15 @@ jobs:
 
       - name: Wire GitHub repo to Amplify app (idempotent)
         run: |
+          # Skip entirely if GH_PAT secret is not configured yet.
+          # Add it at: Settings -> Secrets and variables -> Actions -> GH_PAT
+          if [ -z "$GH_PAT" ]; then
+            echo "GH_PAT secret is not set — skipping Amplify GitHub connection."
+            echo "To enable automatic frontend deploys, add a GitHub PAT (classic, repo scope)"
+            echo "as a repository secret named GH_PAT."
+            exit 0
+          fi
+
           # Check if repo is already connected
           CURRENT_REPO=$(aws amplify get-app \
             --app-id "$AMPLIFY_APP_ID" \
@@ -106,7 +120,7 @@ jobs:
             aws amplify update-app \
               --app-id "$AMPLIFY_APP_ID" \
               --repository "$REPO_URL" \
-              --access-token "${{ secrets.GITHUB_PAT }}" \
+              --access-token "$GH_PAT" \
               --enable-branch-auto-build \
               --enable-branch-auto-deletion
             echo "Amplify app updated."
@@ -114,7 +128,11 @@ jobs:
 
       - name: Create/verify main branch in Amplify (idempotent)
         run: |
-          # Check if branch already exists
+          if [ -z "$GH_PAT" ]; then
+            echo "GH_PAT not set — skipping branch creation."
+            exit 0
+          fi
+
           BRANCH_EXISTS=$(aws amplify list-branches \
             --app-id "$AMPLIFY_APP_ID" \
             --query "branches[?branchName=='$BRANCH'].branchName" \

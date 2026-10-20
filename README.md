@@ -839,12 +839,16 @@ Go to **Settings → Secrets and variables → Actions** in the repository.
 | `AWS_ACCESS_KEY_ID` | IAM access key ID | AWS Console → IAM → Users → `flotech-demo-account` → Security credentials |
 | `AWS_SECRET_ACCESS_KEY` | Secret access key | Same — create new access key if needed |
 | `AWS_ACCOUNT_ID` | `800445863339` | Fixed |
-| `GITHUB_PAT` | GitHub Personal Access Token | [github.com/settings/tokens](https://github.com/settings/tokens) → Generate new token (classic) → tick `repo` scope |
+| `GH_PAT` | GitHub Personal Access Token | [github.com/settings/tokens](https://github.com/settings/tokens) → Generate new token (classic) → tick `repo` scope |
 
-> **GITHUB_PAT** is only used in the `connect-amplify` step to authorise the one-time
+> **GH_PAT** is only used in the `connect-amplify` step to authorise the one-time
 > Amplify ↔ GitHub OAuth handshake. After the connection is established it is never used
 > again. It can be a fine-grained PAT scoped to just this repository with
 > `contents: read` and `webhooks: write` permissions if you prefer tighter scoping.
+>
+> **If `GH_PAT` is not yet set**, the `connect-amplify` step exits cleanly with a
+> message — it does NOT fail the pipeline. CDK deploy and all other jobs continue
+> normally. Add the secret whenever you're ready and the next push will wire Amplify.
 
 **Optional variables** (Settings → Variables → Actions):
 
