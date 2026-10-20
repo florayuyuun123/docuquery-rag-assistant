@@ -318,12 +318,43 @@ export class DocuQueryStack extends cdk.Stack {
         allowOrigins: [props.allowedOrigins],
         allowMethods: apigw.Cors.ALL_METHODS,
         allowHeaders: ['Content-Type', 'Authorization', 'x-correlation-id'],
-        allowCredentials: true,
+        // allowCredentials is NOT needed — the Authorization header is a custom
+        // request header, not a CORS credential (cookies/HTTP auth). Setting it
+        // to true with allowOrigins: ['*'] is invalid per the CORS spec.
       },
       deployOptions: { stageName: props.environment },
     });
 
     this.api = api;
+
+    // ── Gateway Responses (CORS on error responses) ────────────────────────
+    // Without these, 401/403/500 responses from the Cognito authorizer have no
+    // CORS headers, and the browser blocks them as CORS errors instead of
+    // letting the frontend see the status code and redirect to sign-in.
+    // Gateway Response header values must be wrapped in single quotes
+    // for literal strings — API Gateway treats unquoted values as mapping
+    // expressions and rejects them.
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': `'${props.allowedOrigins}'`,
+      'Access-Control-Allow-Headers': "'Content-Type,Authorization,x-correlation-id'",
+    };
+
+    api.addGatewayResponse('UnauthorizedResponse', {
+      type: apigw.ResponseType.UNAUTHORIZED,
+      responseHeaders: corsHeaders,
+    });
+    api.addGatewayResponse('AccessDeniedResponse', {
+      type: apigw.ResponseType.ACCESS_DENIED,
+      responseHeaders: corsHeaders,
+    });
+    api.addGatewayResponse('Default4xxResponse', {
+      type: apigw.ResponseType.DEFAULT_4XX,
+      responseHeaders: corsHeaders,
+    });
+    api.addGatewayResponse('Default5xxResponse', {
+      type: apigw.ResponseType.DEFAULT_5XX,
+      responseHeaders: corsHeaders,
+    });
 
     const auth: apigw.MethodOptions = {
       authorizer: new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
