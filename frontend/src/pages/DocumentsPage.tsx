@@ -15,24 +15,28 @@ function formatSize(bytes: number): string {
 export function DocumentsPage(): JSX.Element {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [error, setError] = useState('');
+  const [pollingActive, setPollingActive] = useState(true);
   const { signOut } = useAuthSession();
 
   const fetchDocs = useCallback(async (): Promise<void> => {
     try {
       const docs = await listDocuments();
       setDocuments(docs);
+      setError('');
     } catch {
-      setError('Failed to load documents.');
+      setError('Failed to load documents. Please sign in again.');
+      setPollingActive(false);
     }
   }, []);
 
   useEffect(() => {
     void fetchDocs();
+    if (!pollingActive) return;
     const interval = setInterval(() => {
       void fetchDocs();
     }, 3000);
     return () => clearInterval(interval);
-  }, [fetchDocs]);
+  }, [fetchDocs, pollingActive]);
 
   const handleDelete = async (documentId: string): Promise<void> => {
     try {

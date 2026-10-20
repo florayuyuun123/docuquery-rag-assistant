@@ -2,6 +2,15 @@ import axios, { type AxiosResponse } from 'axios';
 
 import { getAuthToken } from './authApi';
 
+// On 401, the session is invalid — redirect to sign-in instead of polling forever
+function handleApiError(err: unknown): never {
+  const status = (err as { response?: { status?: number } }).response?.status;
+  if (status === 401) {
+    window.location.href = '/signin';
+  }
+  throw err;
+}
+
 const API_URL = import.meta.env.VITE_API_URL as string;
 
 export interface DocumentSummary {
@@ -29,11 +38,15 @@ export async function requestUploadUrl(
 }
 
 export async function listDocuments(): Promise<DocumentSummary[]> {
-  const token = await getAuthToken();
-  const res = await axios.get(`${API_URL}/documents`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return ((res as AxiosResponse<{ data: { documents?: DocumentSummary[] } }>).data.data?.documents ?? []);
+  try {
+    const token = await getAuthToken();
+    const res = await axios.get(`${API_URL}/documents`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return ((res as AxiosResponse<{ data: { documents?: DocumentSummary[] } }>).data.data?.documents ?? []);
+  } catch (err) {
+    handleApiError(err);
+  }
 }
 
 export async function deleteDocument(documentId: string): Promise<void> {
