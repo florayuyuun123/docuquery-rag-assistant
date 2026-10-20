@@ -376,6 +376,15 @@ export class DocuQueryStack extends cdk.Stack {
     const amplifyApp = new amplify.CfnApp(this, 'AmplifyApp', {
       name: `docuquery-${props.environment}`,
       ...(props.repoUrl && { repository: props.repoUrl }),
+      // SPA rewrite rule — serve index.html for all client-side routes
+      // so React Router handles /signin, /documents, /chat, etc.
+      customRules: [
+        {
+          source: '/<*>',
+          target: '/index.html',
+          status: '200',
+        },
+      ],
       buildSpec: JSON.stringify({
         version: 1,
         frontend: {
