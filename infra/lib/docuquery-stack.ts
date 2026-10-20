@@ -3,6 +3,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as amplify from 'aws-cdk-lib/aws-amplify';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -161,6 +162,11 @@ export class DocuQueryStack extends cdk.Stack {
       functionName: `docuquery-upload-url-${props.environment}`,
       entry: path.join(backendDir, 'src', 'upload-url', 'handler.ts'),
       role: uploadRole,
+      logGroup: new logs.LogGroup(this, 'UploadUrlLogGroup', {
+        logGroupName: `/aws/lambda/docuquery-upload-url-${props.environment}`,
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy,
+      }),
     });
 
     // ── ingest-fn ─────────────────────────────────────────────────────────────
@@ -200,6 +206,11 @@ export class DocuQueryStack extends cdk.Stack {
         externalModules: ['@aws-sdk/*', 'pdf-parse', 'tiktoken', 'mammoth'],
         sourceMap: true,
       },
+      logGroup: new logs.LogGroup(this, 'IngestLogGroup', {
+        logGroupName: `/aws/lambda/docuquery-ingest-${props.environment}`,
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy,
+      }),
     });
 
     // S3 → ingest-fn: use CfnBucketNotification directly to avoid the
@@ -238,6 +249,11 @@ export class DocuQueryStack extends cdk.Stack {
       functionName: `docuquery-documents-${props.environment}`,
       entry: path.join(backendDir, 'src', 'documents', 'handler.ts'),
       role: docsRole,
+      logGroup: new logs.LogGroup(this, 'DocumentsLogGroup', {
+        logGroupName: `/aws/lambda/docuquery-documents-${props.environment}`,
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy,
+      }),
     });
 
     // ── query-fn ──────────────────────────────────────────────────────────────
@@ -266,6 +282,11 @@ export class DocuQueryStack extends cdk.Stack {
       functionName: `docuquery-query-${props.environment}`,
       entry: path.join(backendDir, 'src', 'query', 'handler.ts'),
       role: queryRole,
+      logGroup: new logs.LogGroup(this, 'QueryLogGroup', {
+        logGroupName: `/aws/lambda/docuquery-query-${props.environment}`,
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy,
+      }),
     });
 
     // ── history-fn ────────────────────────────────────────────────────────────
@@ -283,6 +304,11 @@ export class DocuQueryStack extends cdk.Stack {
       functionName: `docuquery-history-${props.environment}`,
       entry: path.join(backendDir, 'src', 'history', 'handler.ts'),
       role: historyRole,
+      logGroup: new logs.LogGroup(this, 'HistoryLogGroup', {
+        logGroupName: `/aws/lambda/docuquery-history-${props.environment}`,
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy,
+      }),
     });
 
     // ── API Gateway ───────────────────────────────────────────────────────────

@@ -286,6 +286,14 @@ The monorepo uses `module: Node16` (ESM) throughout, but several dependencies (`
 
 Also added `test/**/*` to `backend/tsconfig.json` `include` so ESLint can type-check test files alongside source files. This surfaced real bugs: unsafe `.sub` member access on `any`-typed JWT claims (fixed by casting to `Record<string, string>`), `!=` instead of `!==`, and async React handlers passed directly to `onSubmit` (fixed with `void` wrapper).
 
+### Challenge 9: CDK test expected explicit CloudWatch log groups
+
+The CDK assertion test `all Lambda log groups have 30-day retention` failed with `Expected 5 resources of type AWS::Logs::LogGroup but found 0` because the stack relied on Lambda auto-creating log groups at runtime rather than defining them in CDK.
+
+**Problem:** Auto-created log groups have no retention policy — logs accumulate indefinitely and are not visible in `cdk diff` or testable via CDK assertions.
+
+**Solution:** Added an explicit `logs.LogGroup` for each of the 5 Lambda functions with `retention: logs.RetentionDays.ONE_MONTH` and `removalPolicy` matching the environment. Each log group is pre-named `/aws/lambda/docuquery-{fn}-{env}` and wired via the `logGroup` prop on `NodejsFunction`. The log groups now exist from deploy time — before the first Lambda invocation — and the retention policy is enforced from day one.
+
 ---
 
 ## Tech Stack
@@ -679,7 +687,7 @@ Open the AWS Console in `us-east-1`, account `800445863339`:
 | Lambda | `docuquery-history-dev` | Active |
 | S3 | `docuquerystack-documentbucketae41e5a9-y4e69bwevqic` | Block Public Access: ON, SSE: AES256 |
 | DynamoDB | `docuquery-dev` | On-demand, 1 GSI (`userId-createdAt-index`) |
-| CloudWatch | `/aws/lambda/docuquery-*-dev` | 5 log groups, retention: 30 days |
+| CloudWatch | `/aws/lambda/docuquery-*-dev` | 5 log groups, retention: 30 days (CDK-managed) |
 | Amplify | `d3m1ddehppkb04` | App created |
 | Bedrock KB | `LPLGCWRHOM` | Status: ACTIVE |
 | AOSS | `docuquery-vectors` | Status: ACTIVE |
@@ -1109,6 +1117,7 @@ Expected:
 ### Observability quick-reference
 
 ```bash
+# Log groups are CDK-managed with 30-day retention (created on deploy, not first invocation)
 # Tail all five Lambda log groups (open in separate terminals)
 aws logs tail /aws/lambda/docuquery-upload-url-dev  --follow --profile flotech-demo-account --region us-east-1
 aws logs tail /aws/lambda/docuquery-ingest-dev      --follow --profile flotech-demo-account --region us-east-1
