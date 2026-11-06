@@ -17,6 +17,7 @@ new DocuQueryStack(app, 'DocuQueryStack', {
   allowedOrigins: (app.node.tryGetContext('allowedOrigins') as string | undefined) ?? '*',
   environment: (app.node.tryGetContext('environment') as string | undefined) ?? 'dev',
   knowledgeBaseId: app.node.tryGetContext('knowledgeBaseId') as string | undefined,
+  dataSourceId: app.node.tryGetContext('dataSourceId') as string | undefined,
   repoUrl: app.node.tryGetContext('repoUrl') as string | undefined,
   branch: (app.node.tryGetContext('branch') as string | undefined) ?? 'main',
 });

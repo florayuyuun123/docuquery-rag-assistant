@@ -38,6 +38,7 @@ const bedrockAgent = new BedrockAgentClient({});
 const TABLE_NAME = process.env['TABLE_NAME'] ?? '';
 const BUCKET_NAME = process.env['BUCKET_NAME'] ?? '';
 const KNOWLEDGE_BASE_ID = process.env['KNOWLEDGE_BASE_ID'] ?? '';
+const DATA_SOURCE_ID = process.env['DATA_SOURCE_ID'] ?? '';
 
 export const handler = withMiddleware('documents-fn', async (event, _context, correlationId): Promise<APIGatewayProxyResult> => {
   const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
@@ -118,7 +119,7 @@ export const handler = withMiddleware('documents-fn', async (event, _context, co
     await bedrockAgent.send(
       new StartIngestionJobCommand({
         knowledgeBaseId: KNOWLEDGE_BASE_ID,
-        dataSourceId: KNOWLEDGE_BASE_ID,
+        dataSourceId: DATA_SOURCE_ID,
         description: `Remove document ${documentId} chunks from KB`,
       }),
     );

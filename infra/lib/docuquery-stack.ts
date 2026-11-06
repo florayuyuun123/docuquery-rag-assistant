@@ -17,6 +17,7 @@ export interface DocuQueryStackProps extends cdk.StackProps {
   allowedOrigins: string;
   environment: string;
   knowledgeBaseId?: string;
+  dataSourceId?: string;
   /** GitHub repo URL e.g. https://github.com/org/repo */
   repoUrl?: string;
   /** Git branch to deploy via Amplify e.g. main */
@@ -130,6 +131,7 @@ export class DocuQueryStack extends cdk.Stack {
       BUCKET_NAME: bucket.bucketName,
       DOCUMENT_BUCKET_NAME: bucket.bucketName,
       KNOWLEDGE_BASE_ID: props.knowledgeBaseId ?? '',
+      DATA_SOURCE_ID: props.dataSourceId ?? '',
       SIMILARITY_THRESHOLD: '0.5',
       NODE_OPTIONS: '--enable-source-maps',
     };

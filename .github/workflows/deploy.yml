@@ -83,6 +83,7 @@ jobs:
     needs: ci
     outputs:
       kb_id: ${{ steps.kb.outputs.kb_id }}
+      ds_id: ${{ steps.kb.outputs.ds_id }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -101,9 +102,16 @@ jobs:
           if [ -z "$KB_ID" ] || [ "$KB_ID" = "None" ]; then
             echo "No Knowledge Base named '${KB_NAME}' found — CDK will use wildcard ARN."
             echo "kb_id=" >> $GITHUB_OUTPUT
+            echo "ds_id=" >> $GITHUB_OUTPUT
           else
             echo "Found Knowledge Base: ${KB_ID}"
             echo "kb_id=${KB_ID}" >> $GITHUB_OUTPUT
+            DS_ID=$(aws bedrock-agent list-data-sources \
+              --knowledge-base-id "${KB_ID}" \
+              --query "dataSourceSummaries[0].dataSourceId" \
+              --output text 2>/dev/null || echo "")
+            echo "Found Data Source: ${DS_ID}"
+            echo "ds_id=${DS_ID}" >> $GITHUB_OUTPUT
           fi
 
   # ── 3. CDK deploy ──────────────────────────────────────────────────────────
@@ -141,8 +149,12 @@ jobs:
         run: |
           # Build KB ID context arg (empty string if KB doesn't exist yet)
           KB_CONTEXT=""
+          DS_CONTEXT=""
           if [ -n "${{ needs.discover-kb.outputs.kb_id }}" ]; then
             KB_CONTEXT="--context knowledgeBaseId=${{ needs.discover-kb.outputs.kb_id }}"
+          fi
+          if [ -n "${{ needs.discover-kb.outputs.ds_id }}" ]; then
+            DS_CONTEXT="--context dataSourceId=${{ needs.discover-kb.outputs.ds_id }}"
           fi
 
           npx cdk deploy \
@@ -151,6 +163,7 @@ jobs:
             --context awsRegion=${{ env.AWS_REGION }} \
             --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
             $KB_CONTEXT \
+            $DS_CONTEXT \
             --outputs-file ../cdk-outputs.json
 
       - name: Parse CDK outputs
