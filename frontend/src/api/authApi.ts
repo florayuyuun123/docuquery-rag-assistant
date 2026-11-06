@@ -1,10 +1,11 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 export async function getAuthToken(): Promise<string> {
-  // forceRefresh: true ensures expired access tokens are refreshed from the
-  // refresh token before being returned. Without this, a stale token from
-  // a previous Amplify config can cause 401s on every API call.
-  const session = await fetchAuthSession({ forceRefresh: true });
+  // Amplify automatically refreshes the access token when it expires using
+  // the refresh token — no forceRefresh needed. Using forceRefresh: true
+  // causes a Cognito network call on every API request (including polling),
+  // which adds latency and can cause 401s with stale sessions.
+  const session = await fetchAuthSession();
   const token = session.tokens?.accessToken?.toString();
   if (!token) throw new Error('No auth token available');
   return token;
