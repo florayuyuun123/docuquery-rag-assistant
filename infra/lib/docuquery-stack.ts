@@ -376,13 +376,17 @@ export class DocuQueryStack extends cdk.Stack {
     const amplifyApp = new amplify.CfnApp(this, 'AmplifyApp', {
       name: `docuquery-${props.environment}`,
       ...(props.repoUrl && { repository: props.repoUrl }),
-      // SPA rewrite rule — serve index.html for all client-side routes
-      // so React Router handles /signin, /documents, /chat, etc.
+      // SPA fallback rule: status '404' means "when a path would return
+      // 404 (no static file found), serve /index.html instead". This
+      // serves static files (JS, CSS) first, and only falls back to
+      // index.html for client-side routes like /signin, /chat, etc.
+      // Using status '200' would catch ALL paths including /assets/*
+      // and serve HTML instead of JS — that's why we use '404'.
       customRules: [
         {
           source: '/<*>',
           target: '/index.html',
-          status: '200',
+          status: '404',
         },
       ],
       buildSpec: `version: 1
