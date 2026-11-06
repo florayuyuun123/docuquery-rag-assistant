@@ -33,7 +33,9 @@ export async function listDocuments(): Promise<DocumentSummary[]> {
   const res = await axios.get(`${API_URL}/documents`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return ((res as AxiosResponse<{ data: { documents?: DocumentSummary[] } }>).data.data?.documents ?? []);
+  // Backend returns { data: DocumentSummary[], correlationId: string }
+  const body = (res as AxiosResponse<{ data: DocumentSummary[] }>).data;
+  return (body.data ?? []);
 }
 
 export async function deleteDocument(documentId: string): Promise<void> {
