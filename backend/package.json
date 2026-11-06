@@ -36,6 +36,7 @@
     "esbuild": "0.23.1",
     "fast-check": "3.22.0",
     "jest": "29.7.0",
+    "js-tiktoken": "1.0.15",
     "mammoth": "1.8.0",
     "pdf-parse": "^2.4.5",
     "tiktoken": "^1.0.22",

@@ -117,14 +117,16 @@ describe('chunkText()', () => {
   });
 
   it('5. every chunk has at most CHUNK_SIZE_TOKENS tokens', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { get_encoding } = require('tiktoken') as typeof import('tiktoken');
-    const enc = get_encoding('cl100k_base');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
+    const { get_encoding } = require('js-tiktoken') as typeof import('js-tiktoken');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const enc = get_encoding('cl100k_base') as import('js-tiktoken').Tiktoken;
     const longText = Array.from({ length: 2000 }, (_, i) => `token${i}`).join(' ');
     const chunks = chunkText(longText);
     for (const chunk of chunks) {
       expect(enc.encode(chunk).length).toBeLessThanOrEqual(CHUNK_SIZE_TOKENS);
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     enc.free();
   });
 

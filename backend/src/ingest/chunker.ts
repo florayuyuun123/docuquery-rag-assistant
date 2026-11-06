@@ -8,7 +8,8 @@
  */
 
 import { CHUNK_SIZE_TOKENS, CHUNK_OVERLAP_TOKENS } from '@docuquery/shared';
-import { get_encoding } from 'tiktoken';
+// js-tiktoken is the pure-JS port of tiktoken — no WASM binary, bundles cleanly with esbuild.
+import { get_encoding, type Tiktoken } from 'js-tiktoken';
 
 /**
  * Split `text` into chunks of at most `CHUNK_SIZE_TOKENS` tokens, with
@@ -21,7 +22,8 @@ export function chunkText(text: string): string[] {
     return [];
   }
 
-  const enc = get_encoding('cl100k_base');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+  const enc = get_encoding('cl100k_base') as Tiktoken;
 
   try {
     const tokens = enc.encode(text);
@@ -50,6 +52,7 @@ export function chunkText(text: string): string[] {
 
     return chunks;
   } finally {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     enc.free();
   }
 }

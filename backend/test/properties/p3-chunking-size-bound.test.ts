@@ -9,13 +9,15 @@
 
 import { CHUNK_SIZE_TOKENS } from '@docuquery/shared';
 import * as fc from 'fast-check';
-import { get_encoding } from 'tiktoken';
+import { get_encoding } from 'js-tiktoken';
+import type { Tiktoken } from 'js-tiktoken';
 
 import { chunkText } from '../../src/ingest/chunker';
 
 describe('Property 3: Chunking Size Bound', () => {
   it('every chunk has at most 1000 tokens', () => {
-    const enc = get_encoding('cl100k_base');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const enc = get_encoding('cl100k_base') as Tiktoken;
 
     try {
       fc.assert(
@@ -26,7 +28,8 @@ describe('Property 3: Chunking Size Bound', () => {
         { numRuns: 100 },
       );
     } finally {
-      enc.free();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    enc.free();
     }
   });
 });
