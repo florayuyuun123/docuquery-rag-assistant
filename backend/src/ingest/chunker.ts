@@ -37,8 +37,8 @@ export function chunkText(text: string): string[] {
   while (start < totalTokens) {
     const end = Math.min(start + CHUNK_SIZE_TOKENS, totalTokens);
     const chunkTokens = tokens.slice(start, end);
-    // Decode back to a UTF-8 string
-    const chunkText = new TextDecoder().decode(enc.decode(chunkTokens));
+    // js-tiktoken's decode() returns a string directly (not Uint8Array)
+    const chunkText = enc.decode(chunkTokens);
     chunks.push(chunkText);
 
     if (end === totalTokens) {
