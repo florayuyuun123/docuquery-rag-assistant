@@ -98,7 +98,10 @@ export const handler = withMiddleware('upload-url-fn', async (event, _context, c
     Bucket: BUCKET_NAME,
     Key: s3Key,
     ContentType: contentType,
-    ContentLength: fileSize,
+    // ContentLength is intentionally omitted from the signed command.
+    // Including it in the presigned URL signature requires the browser XHR
+    // to send an exact Content-Length header, which browsers don't always
+    // set explicitly — causing a SignatureDoesNotMatch error from S3.
   });
 
   const presignedUrl = await getSignedUrl(s3, putCommand, {

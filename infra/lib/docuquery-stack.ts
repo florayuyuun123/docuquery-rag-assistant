@@ -203,7 +203,9 @@ export class DocuQueryStack extends cdk.Stack {
       timeout: cdk.Duration.minutes(5),
       memorySize: 1024,
       bundling: {
-        externalModules: ['@aws-sdk/*', 'pdf-parse', 'tiktoken', 'mammoth'],
+        // Only @aws-sdk/* is excluded (provided by Lambda runtime).
+        // tiktoken, pdf-parse, mammoth must be bundled — they are not available at runtime.
+        externalModules: ['@aws-sdk/*'],
         sourceMap: true,
       },
       logGroup: new logs.LogGroup(this, 'IngestLogGroup', {

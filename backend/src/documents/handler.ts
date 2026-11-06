@@ -55,7 +55,13 @@ export const handler = withMiddleware('documents-fn', async (event, _context, co
         TableName: TABLE_NAME,
         IndexName: USER_CREATED_AT_INDEX,
         KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: { ':uid': userId },
+        // Filter to only DOC# items — the GSI also returns CHAT# records
+        // since both share the same userId attribute.
+        FilterExpression: 'begins_with(SK, :docPrefix)',
+        ExpressionAttributeValues: {
+          ':uid': userId,
+          ':docPrefix': DOC_PREFIX,
+        },
         ScanIndexForward: false,
       }),
     );
