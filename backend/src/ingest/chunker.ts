@@ -9,7 +9,7 @@
 
 import { CHUNK_SIZE_TOKENS, CHUNK_OVERLAP_TOKENS } from '@docuquery/shared';
 // js-tiktoken is the pure-JS port of tiktoken — no WASM binary, bundles cleanly with esbuild.
-import { get_encoding, type Tiktoken } from 'js-tiktoken';
+import { getEncoding } from 'js-tiktoken';
 
 /**
  * Split `text` into chunks of at most `CHUNK_SIZE_TOKENS` tokens, with
@@ -22,37 +22,30 @@ export function chunkText(text: string): string[] {
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const enc = get_encoding('cl100k_base') as Tiktoken;
+  const enc = getEncoding('cl100k_base');
+  const tokens = enc.encode(text);
+  const totalTokens = tokens.length;
 
-  try {
-    const tokens = enc.encode(text);
-    const totalTokens = tokens.length;
-
-    if (totalTokens === 0) {
-      return [];
-    }
-
-    const chunks: string[] = [];
-    const step = CHUNK_SIZE_TOKENS - CHUNK_OVERLAP_TOKENS;
-
-    let start = 0;
-    while (start < totalTokens) {
-      const end = Math.min(start + CHUNK_SIZE_TOKENS, totalTokens);
-      const chunkTokens = tokens.slice(start, end);
-      // Decode back to a UTF-8 string
-      const chunkText = new TextDecoder().decode(enc.decode(chunkTokens));
-      chunks.push(chunkText);
-
-      if (end === totalTokens) {
-        break;
-      }
-      start += step;
-    }
-
-    return chunks;
-  } finally {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    enc.free();
+  if (totalTokens === 0) {
+    return [];
   }
+
+  const chunks: string[] = [];
+  const step = CHUNK_SIZE_TOKENS - CHUNK_OVERLAP_TOKENS;
+
+  let start = 0;
+  while (start < totalTokens) {
+    const end = Math.min(start + CHUNK_SIZE_TOKENS, totalTokens);
+    const chunkTokens = tokens.slice(start, end);
+    // Decode back to a UTF-8 string
+    const chunkText = new TextDecoder().decode(enc.decode(chunkTokens));
+    chunks.push(chunkText);
+
+    if (end === totalTokens) {
+      break;
+    }
+    start += step;
+  }
+
+  return chunks;
 }

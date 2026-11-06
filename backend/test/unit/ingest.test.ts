@@ -33,7 +33,6 @@ const bedrockAgentMock = mockClient(BedrockAgentClient);
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function bufferToAsyncIterable(buf: Buffer): AsyncIterable<Uint8Array> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return Readable.from([buf]) as unknown as AsyncIterable<Uint8Array>;
 }
 
@@ -117,17 +116,15 @@ describe('chunkText()', () => {
   });
 
   it('5. every chunk has at most CHUNK_SIZE_TOKENS tokens', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
-    const { get_encoding } = require('js-tiktoken') as typeof import('js-tiktoken');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const enc = get_encoding('cl100k_base') as import('js-tiktoken').Tiktoken;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getEncoding } = require('js-tiktoken') as typeof import('js-tiktoken');
+    const enc = getEncoding('cl100k_base');
     const longText = Array.from({ length: 2000 }, (_, i) => `token${i}`).join(' ');
     const chunks = chunkText(longText);
     for (const chunk of chunks) {
       expect(enc.encode(chunk).length).toBeLessThanOrEqual(CHUNK_SIZE_TOKENS);
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    enc.free();
+    // js-tiktoken doesn't require manual cleanup
   });
 
   it('6. adjacent chunks share overlap tokens (verify overlap)', () => {
@@ -199,7 +196,6 @@ describe('ingest handler', () => {
     });
 
     s3Mock.on(GetObjectCommand).resolves({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       Body: bufferToAsyncIterable(fileBuffer) as unknown as import('@aws-sdk/client-s3').GetObjectCommandOutput['Body'],
     });
 
@@ -210,10 +206,8 @@ describe('ingest handler', () => {
     const updateCalls = dynamoMock.commandCalls(UpdateCommand);
     expect(updateCalls.length).toBeGreaterThanOrEqual(2);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const statusValues = updateCalls.map(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'],
+      (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'] as string | undefined,
     );
     expect(statusValues).toContain('processing');
     expect(statusValues).toContain('ready');
@@ -247,7 +241,6 @@ describe('ingest handler', () => {
 
     // Return an empty file
     s3Mock.on(GetObjectCommand).resolves({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       Body: bufferToAsyncIterable(Buffer.from('', 'utf-8')) as unknown as import('@aws-sdk/client-s3').GetObjectCommandOutput['Body'],
     });
 
@@ -255,10 +248,8 @@ describe('ingest handler', () => {
     await handler(event);
 
     const updateCalls = dynamoMock.commandCalls(UpdateCommand);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const statusValues = updateCalls.map(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'],
+      (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'] as string | undefined,
     );
     expect(statusValues).toContain('failed');
   });
@@ -284,10 +275,8 @@ describe('ingest handler', () => {
     await expect(handler(event)).resolves.toBeUndefined();
 
     const updateCalls = dynamoMock.commandCalls(UpdateCommand);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const statusValues = updateCalls.map(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'],
+      (call) => call.args[0]?.input?.ExpressionAttributeValues?.[':status'] as string | undefined,
     );
     expect(statusValues).toContain('failed');
   });

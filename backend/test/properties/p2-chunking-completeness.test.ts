@@ -8,15 +8,14 @@
  */
 
 import * as fc from 'fast-check';
-import { get_encoding } from 'js-tiktoken';
-import type { Tiktoken } from 'js-tiktoken';
+import { getEncoding } from 'js-tiktoken';
 
 import { chunkText } from '../../src/ingest/chunker';
 
 describe('Property 2: Chunking Completeness', () => {
   it('all tokens from input appear in at least one chunk', () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const enc = get_encoding('cl100k_base') as Tiktoken;
+    const enc = getEncoding('cl100k_base');
 
     try {
       fc.assert(
@@ -42,7 +41,7 @@ describe('Property 2: Chunking Completeness', () => {
       );
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    enc.free();
+    // js-tiktoken doesn't require manual cleanup
     }
   });
 });
