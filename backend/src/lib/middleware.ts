@@ -66,6 +66,7 @@ export function withMiddleware(functionName: string, handler: ApiHandler) {
         ...result,
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
           'x-correlation-id': correlationId,
           ...result.headers,
         },
@@ -87,6 +88,7 @@ export function withMiddleware(functionName: string, handler: ApiHandler) {
           statusCode: err.statusCode,
           headers: {
             'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
             'x-correlation-id': correlationId,
           },
           body: JSON.stringify({
@@ -103,6 +105,7 @@ export function withMiddleware(functionName: string, handler: ApiHandler) {
         statusCode: 500,
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
           'x-correlation-id': correlationId,
         },
         body: JSON.stringify({
