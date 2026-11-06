@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { listDocuments, deleteDocument, DocumentSummary } from '../api/documentsApi';
 import { UploadZone } from '../components/UploadZone';
@@ -15,7 +15,8 @@ function formatSize(bytes: number): string {
 export function DocumentsPage(): JSX.Element {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [error, setError] = useState('');
-  const [pollingActive, setPollingActive] = useState(true);
+  const pollingRef = useRef(true);
+  const navigate = useNavigate();
   const { signOut } = useAuthSession();
 
   const fetchDocs = useCallback(async (): Promise<void> => {
@@ -23,20 +24,28 @@ export function DocumentsPage(): JSX.Element {
       const docs = await listDocuments();
       setDocuments(docs);
       setError('');
-    } catch {
-      setError('Failed to load documents. Please sign in again.');
-      setPollingActive(false);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      // Stop polling immediately on any error
+      pollingRef.current = false;
+      if (status === 401) {
+        // Sign out via Amplify (clears tokens) then navigate — no hard reload
+        await signOut();
+        return;
+      }
+      setError('Failed to load documents. Please try again.');
     }
-  }, []);
+  }, [navigate, signOut]);
 
   useEffect(() => {
     void fetchDocs();
-    if (!pollingActive) return;
     const interval = setInterval(() => {
-      void fetchDocs();
+      if (pollingRef.current) {
+        void fetchDocs();
+      }
     }, 3000);
     return () => clearInterval(interval);
-  }, [fetchDocs, pollingActive]);
+  }, [fetchDocs]);
 
   const handleDelete = async (documentId: string): Promise<void> => {
     try {
