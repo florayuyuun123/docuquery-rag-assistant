@@ -150,8 +150,6 @@ jobs:
             --context environment=${{ env.ENVIRONMENT }} \
             --context awsRegion=${{ env.AWS_REGION }} \
             --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
-            --context repoUrl=${{ env.REPO_URL }} \
-            --context branch=${{ env.BRANCH }} \
             $KB_CONTEXT \
             --outputs-file ../cdk-outputs.json
 
