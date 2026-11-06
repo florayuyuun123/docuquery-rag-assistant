@@ -108,23 +108,34 @@ export async function extractText(
     }
 
     // Textract OCR fallback for scanned PDFs
-    const startResponse = await textract.send(
-      new StartDocumentTextDetectionCommand({
-        DocumentLocation: {
-          S3Object: {
-            Bucket: bucketName,
-            Name: s3Key,
+    try {
+      const startResponse = await textract.send(
+        new StartDocumentTextDetectionCommand({
+          DocumentLocation: {
+            S3Object: {
+              Bucket: bucketName,
+              Name: s3Key,
+            },
           },
-        },
-      }),
-    );
+        }),
+      );
 
-    const jobId = startResponse.JobId;
-    if (!jobId) {
-      throw new Error('Textract did not return a JobId');
+      const jobId = startResponse.JobId;
+      if (!jobId) {
+        throw new Error('Textract did not return a JobId');
+      }
+
+      return await pollTextractJob(jobId);
+    } catch (err) {
+      const error = err as Error & { name?: string };
+      // If Textract is not enabled/subscribed, return empty string and log a warning
+      if (error.name === 'SubscriptionRequiredException') {
+        // eslint-disable-next-line no-console
+        console.warn('Textract not available — PDF has no extractable text layer. Enable Textract or upload PDFs with embedded text.');
+        return '';
+      }
+      throw err;
     }
-
-    return await pollTextractJob(jobId);
   }
 
   throw new Error(`Unsupported content type: ${contentType}`);

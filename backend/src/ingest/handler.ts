@@ -32,6 +32,7 @@ const logger = createLogger('ingest-fn');
 
 const TABLE_NAME = process.env['TABLE_NAME'] ?? '';
 const KNOWLEDGE_BASE_ID = process.env['KNOWLEDGE_BASE_ID'] ?? '';
+const DATA_SOURCE_ID = process.env['DATA_SOURCE_ID'] ?? '';
 
 /**
  * Update the document status in DynamoDB.
@@ -171,7 +172,7 @@ export const handler = async (event: S3Event): Promise<void> => {
       await bedrockAgent.send(
         new StartIngestionJobCommand({
           knowledgeBaseId: KNOWLEDGE_BASE_ID,
-          dataSourceId: KNOWLEDGE_BASE_ID, // dataSourceId matches KB for S3 datasource
+          dataSourceId: DATA_SOURCE_ID,
           description: `Ingest document ${documentId} for user ${userId}`,
         }),
       );
@@ -208,7 +209,7 @@ export const handler = async (event: S3Event): Promise<void> => {
         await bedrockAgent.send(
           new StartIngestionJobCommand({
             knowledgeBaseId: KNOWLEDGE_BASE_ID,
-            dataSourceId: KNOWLEDGE_BASE_ID,
+            dataSourceId: DATA_SOURCE_ID,
             description: `Cleanup re-sync after failed ingest of document ${documentId}`,
           }),
         );
