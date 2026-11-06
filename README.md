@@ -126,7 +126,7 @@ The architecture is divided into five tiers:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  TIER 1 — FRONTEND                                                           │
-│  React 18 + TypeScript SPA  hosted on  AWS Amplify (App: d3m1ddehppkb04)   │
+│  React 18 + TypeScript SPA  hosted on  AWS Amplify (App: d2aorcdg8vm2l4)   │
 │  Cognito auth flows · JWT token management · XHR upload progress            │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │ HTTPS + JWT Bearer
@@ -134,7 +134,7 @@ The architecture is divided into five tiers:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  TIER 2 — API                                                                │
 │  Amazon API Gateway REST  ←→  Amazon Cognito (JWT authorizer)               │
-│  https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/               │
+│  https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/               │
 │  5 routes · CORS · Request validation · Throttling                          │
 └────┬──────────────┬──────────────┬────────────────┬───────────────┬─────────┘
      │              │              │                │               │
@@ -148,7 +148,7 @@ The architecture is divided into five tiers:
 ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐       │
 │  TIER 3  │  │ Amazon   │  │ Amazon   │  │  Amazon      │       │
 │ Amazon   │  │ DynamoDB │  │ Textract │  │  Bedrock KB  │◄──────┘
-│   S3     │  │ (single  │  │  (OCR)   │  │  (LPLGCWRHOM)│
+│   S3     │  │ (single  │  │  (OCR)   │  │  (GWCJWPQZSF)│
 │(SSE-S3)  │  │  table)  │  │          │  │  Claude 3 /  │
 └──────────┘  └──────────┘  └──────────┘  │  Titan Emb.  │
                                            └──────┬───────┘
@@ -301,7 +301,7 @@ The CDK assertion test `all Lambda log groups have 30-day retention` failed with
 | Layer | Technology | Why |
 |-------|-----------|-----|
 | Frontend | React 18 + TypeScript + Vite | Fast builds, strict types, Amplify v6 integration |
-| Hosting | AWS Amplify (App: `d3m1ddehppkb04`) | Managed CI/CD, Cognito integration built-in |
+| Hosting | AWS Amplify (App: `d2aorcdg8vm2l4`) | Managed CI/CD, Cognito integration built-in |
 | Auth | Amazon Cognito | Managed JWT, email MFA, account lockout — no auth server to run |
 | API | API Gateway REST | Per-request billing, Cognito authorizer, request validation |
 | Backend | Lambda × 5 (Node.js 20, ARM64) | ~20% cheaper than x86, cold starts acceptable |
@@ -324,7 +324,7 @@ docuquery-rag-assistant/
 │
 ├── README.md
 ├── docs/
-│   └── architecture.drawio          ← open in diagrams.net
+│   └── architecture.mmd          ← open in diagrams.net
 │
 ├── shared/                           ← shared TypeScript types + constants
 │   └── src/
@@ -423,12 +423,12 @@ npx cdk deploy \
   --context awsAccountId=800445863339
 
 # CDK outputs: save these — you will need them in Step 7 and Step 9
-# DocuQueryStack.UserPoolId         = us-east-1_mBss1Hu0l
-# DocuQueryStack.UserPoolClientId   = 5jgr5ml0r123hmn2blj720r1du
-# DocuQueryStack.IdentityPoolId     = us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43
-# DocuQueryStack.ApiGatewayUrl      = https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/
-# DocuQueryStack.DocumentBucketName = docuquerystack-documentbucketae41e5a9-y4e69bwevqic
-# DocuQueryStack.AmplifyAppId       = d3m1ddehppkb04
+# DocuQueryStack.UserPoolId         = us-east-1_kc9C1KHxz
+# DocuQueryStack.UserPoolClientId   = 6kunv07r1at24o6srco0kkc6i4
+# DocuQueryStack.IdentityPoolId     = us-east-1:89cefc81-e969-4864-b770-4a0276e48c5f
+# DocuQueryStack.ApiGatewayUrl      = https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/
+# DocuQueryStack.DocumentBucketName = docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2
+# DocuQueryStack.AmplifyAppId       = d2aorcdg8vm2l4
 ```
 
 ### Create the Bedrock Knowledge Base (CLI)
@@ -456,8 +456,8 @@ aws iam put-role-policy --role-name docuquery-kb-role --policy-name S3Access \
   --policy-document '{
     "Version":"2012-10-17",
     "Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket"],
-    "Resource":["arn:aws:s3:::docuquerystack-documentbucketae41e5a9-y4e69bwevqic",
-                "arn:aws:s3:::docuquerystack-documentbucketae41e5a9-y4e69bwevqic/*"]}]
+    "Resource":["arn:aws:s3:::docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2",
+                "arn:aws:s3:::docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2/*"]}]
   }' --profile flotech-demo-account
 
 # Attach Bedrock embedding permission
@@ -482,7 +482,7 @@ aws opensearchserverless create-security-policy --name docuquery-net --type netw
 # Create collection
 aws opensearchserverless create-collection --name docuquery-vectors \
   --type VECTORSEARCH --region us-east-1 --profile flotech-demo-account
-# Returns collection ID, e.g. h04acuqvvvd64qsauu2k — wait ~3 min for ACTIVE status
+# Returns collection ID, e.g. 9uh8a5ei1z5qh6luc4b4 — wait ~3 min for ACTIVE status
 
 # Data access policy — grants KB role full index access
 aws opensearchserverless create-access-policy --name docuquery-access --type data \
@@ -564,7 +564,7 @@ resp = client.create_data_source(
     dataSourceConfiguration={
         "type": "S3",
         "s3Configuration": {
-            "bucketArn": "arn:aws:s3:::docuquerystack-documentbucketae41e5a9-y4e69bwevqic"
+            "bucketArn": "arn:aws:s3:::docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2"
         }
     },
     vectorIngestionConfiguration={
@@ -589,7 +589,7 @@ npx cdk deploy \
   --context environment=dev \
   --context awsRegion=us-east-1 \
   --context awsAccountId=800445863339 \
-  --context knowledgeBaseId=LPLGCWRHOM
+  --context knowledgeBaseId=GWCJWPQZSF
 ```
 
 ### Configure the frontend
@@ -597,11 +597,11 @@ npx cdk deploy \
 ```bash
 # ── Step 7: Copy CDK outputs into frontend env file ───────────────────────────
 # frontend/.env.local  (never commit — already in .gitignore)
-VITE_USER_POOL_ID=us-east-1_mBss1Hu0l
-VITE_USER_POOL_CLIENT_ID=5jgr5ml0r123hmn2blj720r1du
-VITE_IDENTITY_POOL_ID=us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43
-VITE_API_URL=https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/
-VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-y4e69bwevqic
+VITE_USER_POOL_ID=us-east-1_kc9C1KHxz
+VITE_USER_POOL_CLIENT_ID=6kunv07r1at24o6srco0kkc6i4
+VITE_IDENTITY_POOL_ID=us-east-1:89cefc81-e969-4864-b770-4a0276e48c5f
+VITE_API_URL=https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/
+VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2
 
 # ── Step 8: Build the frontend ────────────────────────────────────────────────
 cd ../frontend && npm run build
@@ -626,26 +626,26 @@ Current deployment — account `800445863339`, region `us-east-1`.
 
 | Service | Resource name | Value / ID |
 |---------|--------------|-----------|
-| Cognito User Pool | `docuquery-dev` | `us-east-1_mBss1Hu0l` |
-| Cognito App Client | — | `5jgr5ml0r123hmn2blj720r1du` |
-| Cognito Identity Pool | — | `us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43` |
+| Cognito User Pool | `docuquery-dev` | `us-east-1_kc9C1KHxz` |
+| Cognito App Client | — | `6kunv07r1at24o6srco0kkc6i4` |
+| Cognito Identity Pool | — | `us-east-1:89cefc81-e969-4864-b770-4a0276e48c5f` |
 | DynamoDB Table | `docuquery-dev` | PAY_PER_REQUEST · AES256 · 1 GSI |
-| S3 Document Bucket | `docuquerystack-documentbucketae41e5a9-y4e69bwevqic` | SSE-S3 · Block Public Access |
-| API Gateway | `docuquery-dev` | `https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/` |
+| S3 Document Bucket | `docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2` | SSE-S3 · Block Public Access |
+| API Gateway | `docuquery-dev` | `https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/` |
 | Lambda: upload-url | `docuquery-upload-url-dev` | ARM64 · Node 20 · 29s timeout |
 | Lambda: ingest | `docuquery-ingest-dev` | ARM64 · Node 20 · 5m timeout · 1024 MB |
 | Lambda: documents | `docuquery-documents-dev` | ARM64 · Node 20 · 29s timeout |
 | Lambda: query | `docuquery-query-dev` | ARM64 · Node 20 · 29s timeout |
 | Lambda: history | `docuquery-history-dev` | ARM64 · Node 20 · 29s timeout |
-| Amplify App | `docuquery-dev` | App ID: `d3m1ddehppkb04` |
+| Amplify App | `docuquery-dev` | App ID: `d2aorcdg8vm2l4` |
 
 ### Bedrock & Vector Store Resources
 
 | Resource | Name / ID | Notes |
 |----------|----------|-------|
-| Bedrock Knowledge Base | `docuquery-dev` | ID: `LPLGCWRHOM` |
-| KB Data Source | `docuquery-s3-source` | ID: `BIMFCFRPEH` · S3-backed |
-| AOSS Collection | `docuquery-vectors` | ID: `h04acuqvvvd64qsauu2k` · ACTIVE |
+| Bedrock Knowledge Base | `docuquery-dev` | ID: `GWCJWPQZSF` |
+| KB Data Source | `docuquery-s3-source` | ID: `7EVM39KBAD` · S3-backed |
+| AOSS Collection | `docuquery-vectors` | ID: `9uh8a5ei1z5qh6luc4b4` · ACTIVE |
 | AOSS Vector Index | `docuquery-index` | 1024-dim · HNSW/faiss · l2 space |
 | KB IAM Role | `docuquery-kb-role` | `arn:aws:iam::800445863339:role/docuquery-kb-role` |
 | Embedding model | Titan Embeddings V2 | `amazon.titan-embed-text-v2:0` |
@@ -668,7 +668,7 @@ Current deployment — account `800445863339`, region `us-east-1`.
 ```bash
 cd infra
 npx cdk diff --profile flotech-demo-account --context environment=dev \
-  --context knowledgeBaseId=LPLGCWRHOM
+  --context knowledgeBaseId=GWCJWPQZSF
 # Expected: "There were no differences"
 ```
 
@@ -683,13 +683,13 @@ Open the AWS Console in `us-east-1`, account `800445863339`:
 | Lambda | `docuquery-upload-url-dev` | Active, ARM64, Node.js 20 |
 | Lambda | `docuquery-ingest-dev` | Active, 1,024 MB, 5-min timeout |
 | Lambda | `docuquery-documents-dev` | Active |
-| Lambda | `docuquery-query-dev` | Active, `KNOWLEDGE_BASE_ID=LPLGCWRHOM` |
+| Lambda | `docuquery-query-dev` | Active, `KNOWLEDGE_BASE_ID=GWCJWPQZSF` |
 | Lambda | `docuquery-history-dev` | Active |
-| S3 | `docuquerystack-documentbucketae41e5a9-y4e69bwevqic` | Block Public Access: ON, SSE: AES256 |
+| S3 | `docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2` | Block Public Access: ON, SSE: AES256 |
 | DynamoDB | `docuquery-dev` | On-demand, 1 GSI (`userId-createdAt-index`) |
 | CloudWatch | `/aws/lambda/docuquery-*-dev` | 5 log groups, retention: 30 days (CDK-managed) |
-| Amplify | `d3m1ddehppkb04` | App created |
-| Bedrock KB | `LPLGCWRHOM` | Status: ACTIVE |
+| Amplify | `d2aorcdg8vm2l4` | App created |
+| Bedrock KB | `GWCJWPQZSF` | Status: ACTIVE |
 | AOSS | `docuquery-vectors` | Status: ACTIVE |
 
 ### Step 3 — Verify Lambda environment variables
@@ -698,13 +698,13 @@ Open the AWS Console in `us-east-1`, account `800445863339`:
 aws lambda get-function-configuration --function-name docuquery-query-dev \
   --region us-east-1 --profile flotech-demo-account \
   --query "Environment.Variables" --output table
-# KNOWLEDGE_BASE_ID must be LPLGCWRHOM
+# KNOWLEDGE_BASE_ID must be GWCJWPQZSF
 ```
 
 ### Step 4 — API smoke tests
 
 ```bash
-API_URL="https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev"
+API_URL="https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev"
 
 # Should return 401 (auth enforced)
 curl -s -o /dev/null -w "%{http_code}" $API_URL/documents
@@ -739,7 +739,7 @@ curl -X OPTIONS "$API_URL/documents" \
 | Document stuck on `processing` | Titan invocation failed on first call | Check CloudWatch ingest logs for `AccessDeniedException`; re-upload to trigger retry |
 | `502` on `/query` | Claude 3 Haiku use case form needed | Open Bedrock console → check for Anthropic use case prompt; complete if shown |
 | `401` on every API request | `VITE_API_URL` missing trailing slash | Ensure `.env.local` value ends with `/` |
-| Citations show empty `documentName` | KB ID mismatch | Verify `KNOWLEDGE_BASE_ID` env var on all three Lambdas equals `LPLGCWRHOM` |
+| Citations show empty `documentName` | KB ID mismatch | Verify `KNOWLEDGE_BASE_ID` env var on all three Lambdas equals `GWCJWPQZSF` |
 | Frontend can't sign in | Wrong `VITE_USER_POOL_ID` or client ID | Use values from the [Deployed Resources](#deployed-resources) table above |
 | `cdk bootstrap` fails with EarlyValidation | Orphaned staging bucket | Empty + delete `cdk-hnb659fds-assets-800445863339-us-east-1`, delete stuck CDKToolkit stack, retry |
 
@@ -758,11 +758,11 @@ The frontend connects to the deployed AWS backend. Your `frontend/.env.local` mu
 
 ```bash
 # frontend/.env.local  ← this file is gitignored, never commit it
-VITE_USER_POOL_ID=us-east-1_mBss1Hu0l
-VITE_USER_POOL_CLIENT_ID=5jgr5ml0r123hmn2blj720r1du
-VITE_IDENTITY_POOL_ID=us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43
-VITE_API_URL=https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/
-VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-y4e69bwevqic
+VITE_USER_POOL_ID=us-east-1_kc9C1KHxz
+VITE_USER_POOL_CLIENT_ID=6kunv07r1at24o6srco0kkc6i4
+VITE_IDENTITY_POOL_ID=us-east-1:89cefc81-e969-4864-b770-4a0276e48c5f
+VITE_API_URL=https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/
+VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2
 ```
 
 ---
@@ -803,7 +803,7 @@ The property-based tests use **fast-check** to verify 12 correctness properties:
 
 ## CI/CD Pipeline
 
-Every push to `main` automatically lints, tests, deploys infra changes, and builds the frontend via Amplify. No manual AWS console steps required.
+Every push to `main` runs a fully automated deploy — no hardcoded resource IDs, no manual AWS console steps. The pipeline auto-discovers the Knowledge Base ID and Amplify App ID at runtime.
 
 ### How it works
 
@@ -814,61 +814,46 @@ push to main
 [1] CI Gate ────────── lint + all tests + frontend typecheck + build
      |
      v
-[2] Connect Amplify ── wires GitHub repo to Amplify app once (idempotent — no-op after first run)
-     |                 creates the main branch in Amplify with auto-build enabled
+[2] Discover KB ─────── lists Bedrock KBs by name docuquery-{env}
+     |                   outputs kb_id (or empty if KB doesn't exist yet)
      v
-[3] CDK Deploy ──────── applies any infra changes (Lambda code, IAM, env vars)
-     |                  no-op in ~15 s when nothing changed
+[3] CDK Deploy ──────── deploys/updates the full stack
+     |                   reads KB ID from step 2 (or uses wildcard ARN if empty)
+     |                   outputs: amplify_app_id, bucket_name
      v
-[4] Monitor Amplify ─── waits for Amplify's automatic build to complete
-                        Amplify triggers itself via GitHub webhook on every push
-                        falls back to a manual trigger if the webhook fires late
+[4] Connect Amplify ─── reads amplify_app_id from step 3
+     |                   wires GitHub repo to Amplify using GH_PAT (idempotent)
+     v
+[5] Monitor Amplify ─── waits for Amplify's automatic build to complete
+                        falls back to manual trigger if webhook is slow
 ```
 
-After the first run, step 2 is always a no-op — Amplify is already wired. Steps 3 and 4
-are the only meaningful work on subsequent pushes.
+All resource IDs are discovered at runtime — the workflow works across
+environments and survives full teardowns without manual updates.
 
 ### One-time setup: add GitHub secrets
 
-Go to **Settings → Secrets and variables → Actions** in the repository.
+Go to **Settings -> Secrets and variables -> Actions** in the repository.
 
 **Secrets:**
 
 | Name | Value | Where to get it |
 |------|-------|----------------|
-| `AWS_ACCESS_KEY_ID` | IAM access key ID | AWS Console → IAM → Users → `flotech-demo-account` → Security credentials |
-| `AWS_SECRET_ACCESS_KEY` | Secret access key | Same — create new access key if needed |
+| `AWS_ACCESS_KEY_ID` | IAM access key ID | AWS Console -> IAM -> Users -> `flotech-demo-account` |
+| `AWS_SECRET_ACCESS_KEY` | Secret access key | Same |
 | `AWS_ACCOUNT_ID` | `800445863339` | Fixed |
-| `GH_PAT` | GitHub Personal Access Token | [github.com/settings/tokens](https://github.com/settings/tokens) → Generate new token (classic) → tick `repo` scope |
+| `GH_PAT` | GitHub Personal Access Token | [github.com/settings/tokens](https://github.com/settings/tokens) -> Generate new token (classic) -> tick `repo` scope |
 
-> **GH_PAT** is only used in the `connect-amplify` step to authorise the one-time
-> Amplify ↔ GitHub OAuth handshake. After the connection is established it is never used
-> again. It can be a fine-grained PAT scoped to just this repository with
-> `contents: read` and `webhooks: write` permissions if you prefer tighter scoping.
->
-> **If `GH_PAT` is not yet set**, the `connect-amplify` step exits cleanly with a
-> message — it does NOT fail the pipeline. CDK deploy and all other jobs continue
-> normally. Add the secret whenever you're ready and the next push will wire Amplify.
+> **GH_PAT** is only used once to connect Amplify to the GitHub repo. If not set,
+> the step exits cleanly — the pipeline continues. Add it whenever ready.
+> Note: GitHub reserves the `GITHUB_` prefix — use `GH_PAT` instead.
 
-**Optional variables** (Settings → Variables → Actions):
+**Optional variables:**
 
 | Name | Default |
 |------|---------|
 | `ENVIRONMENT` | `dev` |
 | `AWS_REGION` | `us-east-1` |
-
-### After adding the secrets
-
-Push any commit to `main`. On the first run:
-
-1. `connect-amplify` links `https://github.com/florayuyuun123/docuquery-rag-assistant` to Amplify app `d3m1ddehppkb04` and creates the `main` branch with auto-build enabled
-2. Amplify installs the GitHub webhook automatically — all future pushes trigger builds without GitHub Actions involvement
-3. The frontend is live at `https://main.d3m1ddehppkb04.amplifyapp.com`
-
-Track the run at:
-```
-https://github.com/florayuyuun123/docuquery-rag-assistant/actions
-```
 
 ### Running CI locally before pushing
 
@@ -966,7 +951,7 @@ Healthy log entry:
 **Verify S3 and DynamoDB:**
 ```bash
 # File in S3 under USER#{userId}/DOC#{documentId}/
-aws s3 ls s3://docuquerystack-documentbucketae41e5a9-y4e69bwevqic \
+aws s3 ls s3://docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2 \
   --recursive --profile flotech-demo-account
 
 # Record in DynamoDB with status=ready
@@ -1068,7 +1053,7 @@ Expected:
 Expected:
 [x] Item removed from UI
 [x] S3 object gone:
-    aws s3 ls s3://docuquerystack-documentbucketae41e5a9-y4e69bwevqic --recursive
+    aws s3 ls s3://docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2 --recursive
 [x] DynamoDB record gone:
     aws dynamodb get-item --table-name docuquery-dev --region us-east-1 ...
 [x] Querying that document's content now returns fallback
@@ -1189,6 +1174,49 @@ Lambda event types (`APIGatewayProxyEvent`) have deeply optional fields. Without
 **6. Use boto3/Python for complex AWS CLI operations on Windows**
 PowerShell's string escaping makes deeply nested JSON arguments to AWS CLI commands unreliable on Windows — multi-level quotes frequently cause silent command cancellations. For operations like creating a Bedrock Knowledge Base (which requires nested JSON configs), writing a 10-line Python boto3 script is faster and more reliable than fighting PowerShell escaping.
 
+
+### Challenge 10: API Gateway CORS on error responses
+
+The Cognito JWT authorizer returns 401 for invalid/expired tokens. API Gateway does not include CORS headers on these error responses by default — the browser blocks them entirely as CORS errors, so the frontend can never see the 401 to redirect to sign-in.
+
+**Solution:** Added four `GatewayResponse` resources to the CDK stack (UNAUTHORIZED, ACCESS_DENIED, DEFAULT_4XX, DEFAULT_5XX) with `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers`. Also removed `allowCredentials: true` — the `Authorization: Bearer` header is a custom request header, not a CORS credential, so credentials mode was incompatible with `allowOrigins: ['*']`.
+
+> Gateway Response header values must be wrapped in single quotes for literal strings (e.g. `'*'`, `'Content-Type,Authorization'`). Unquoted values are parsed as mapping expressions and rejected by API Gateway.
+
+### Challenge 11: SPA routing on Amplify
+
+Direct navigation to `/signin` returns 404 because Amplify looks for a server-side file at that path. React Router routes are client-side only.
+
+**Solution:** Added `customRules` to the `CfnApp` construct:
+```typescript
+customRules: [{ source: '/<*>', target: '/index.html', status: '200' }]
+```
+Amplify serves `index.html` for any path that doesn't match a static file, letting React Router handle routing.
+
+### Challenge 12: Amplify build spec format and shared package
+
+The Amplify build produced `index.html` but no `assets/` directory. Two issues:
+
+1. The build spec was passed as `JSON.stringify(...)` (single-line JSON) — Amplify's parser didn't handle it correctly. Fixed by using a proper YAML string with line breaks.
+
+2. The build spec was missing `npm run build --workspace=shared` in `preBuild`. The frontend imports `@docuquery/shared` which needs to be compiled to `shared/dist/` before Vite can resolve it.
+
+### Challenge 13: Amplify v6 Identity Pool causing 400 errors
+
+Including `identityPoolId` in the Amplify v6 config causes `fetchAuthSession()` to call `GetCredentialsForIdentity` on every invocation, which fails with 400 and breaks all API calls.
+
+**Solution:** Removed `identityPoolId` from `amplifyConfigure.ts`. The API Gateway uses a Cognito User Pool JWT authorizer — no AWS credentials needed client-side. S3 uploads use presigned URLs from the backend.
+
+### Challenge 14: Stale auth sessions and API URL double slash
+
+After the Amplify config change, existing browser sessions had stale tokens causing 401 on every API call. Additionally, `VITE_API_URL` ends with `/` and the code appended `/documents`, producing `dev//documents` — a path API Gateway doesn't match.
+
+**Solutions:**
+- Added `forceRefresh: true` to `fetchAuthSession()` so expired access tokens are refreshed automatically
+- Added `handleApiError()` that redirects to `/signin` on 401 instead of polling forever
+- Added `pollingActive` state to `DocumentsPage` — stops the 3-second poll on first error
+- Stripped trailing slash from `API_URL` in all three API client files: `.replace(/\/$/, '')`
+
 ---
 
 ## Cleanup
@@ -1214,9 +1242,9 @@ import boto3
 session = boto3.Session(profile_name="flotech-demo-account", region_name="us-east-1")
 client = session.client("bedrock-agent")
 # Data source must be deleted before the KB
-client.delete_data_source(knowledgeBaseId="LPLGCWRHOM", dataSourceId="BIMFCFRPEH")
+client.delete_data_source(knowledgeBaseId="GWCJWPQZSF", dataSourceId="7EVM39KBAD")
 print("Data source deleted")
-client.delete_knowledge_base(knowledgeBaseId="LPLGCWRHOM")
+client.delete_knowledge_base(knowledgeBaseId="GWCJWPQZSF")
 print("Knowledge base deleted")
 PYEOF
 ```
@@ -1228,7 +1256,7 @@ KB IAM role (managed by CDK) is still present at this point and the delete will 
 
 ```bash
 # Delete the collection
-aws opensearchserverless delete-collection --id h04acuqvvvd64qsauu2k \
+aws opensearchserverless delete-collection --id 9uh8a5ei1z5qh6luc4b4 \
   --region us-east-1 --profile flotech-demo-account
 
 # Wait ~60 seconds for deletion, then remove the associated policies
@@ -1268,7 +1296,7 @@ npx cdk destroy \
   --context environment=dev \
   --context awsRegion=us-east-1 \
   --context awsAccountId=800445863339 \
-  --context knowledgeBaseId=LPLGCWRHOM
+  --context knowledgeBaseId=GWCJWPQZSF
 ```
 
 > **Prod teardown:** If `--context environment=prod` is used, the S3 bucket, DynamoDB
@@ -1322,8 +1350,8 @@ to confirm no `DocuQuery`-tagged charges are accruing.
 
 | Order | Resource | Created by | Deleted by |
 |-------|----------|-----------|------------|
-| 1 | KB data source `BIMFCFRPEH` | Manual (boto3) | Manual (boto3) — must go before KB |
-| 2 | Knowledge Base `LPLGCWRHOM` | Manual (boto3) | Manual (boto3) — must go before AOSS |
+| 1 | KB data source `7EVM39KBAD` | Manual (boto3) | Manual (boto3) — must go before KB |
+| 2 | Knowledge Base `GWCJWPQZSF` | Manual (boto3) | Manual (boto3) — must go before AOSS |
 | 3 | AOSS collection `docuquery-vectors` | Manual (CLI) | Manual (CLI) — main cost driver |
 | 4 | AOSS policies (access, network, encryption) | Manual (CLI) | Manual (CLI) — after collection |
 | 5 | KB IAM role `docuquery-kb-role` | Manual (CLI) | Manual (CLI) — not in CDK |
@@ -1341,9 +1369,9 @@ Viewing options:
 - **GitHub** — opens and renders automatically at the link above
 - **VS Code** — install [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid)
 - **Live editor** — paste `docs/architecture.mmd` at [mermaid.live](https://mermaid.live)
-- **draw.io** — File → Import from → Device, select `docs/architecture.mmd`
+- **mermaid.live** — File → Import from → Device, select `docs/architecture.mmd`
 
-> Note: draw.io does not render official AWS service icons from Mermaid source.
+> Note: mermaid.live does not render official AWS service icons from Mermaid source.
 > The diagram uses colour-coded node groups (orange = AWS managed, purple = Bedrock/AOSS,
 > green = storage, red = observability) to convey service categories clearly.
 

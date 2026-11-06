@@ -2,22 +2,16 @@
 #
 # CD pipeline — triggers on every push to main.
 #
-# What this does on EVERY push:
-#   1. CI gate        lint + tests + frontend build (fail fast)
-#   2. Connect        wire Amplify <-> GitHub once (idempotent — skipped if already connected)
-#   3. CDK deploy     update Lambda/IAM/infra if changed (idempotent — no-op if nothing changed)
-#   4. Amplify build  Amplify builds & deploys the frontend automatically via its webhook
-#
-# After the first successful run, step 2 is a no-op (already connected) and
-# Amplify handles step 4 natively on every push — GitHub Actions just monitors it.
+# Fully automated: no hardcoded resource IDs. The Amplify App ID is discovered
+# from CDK deploy outputs; the Knowledge Base ID is discovered from the Bedrock
+# API by name; the repo URL is derived from the GitHub context.
 #
 # Required GitHub secrets (Settings -> Secrets -> Actions):
-#   AWS_ACCESS_KEY_ID       IAM access key for flotech-demo-account
+#   AWS_ACCESS_KEY_ID       IAM access key
 #   AWS_SECRET_ACCESS_KEY   Matching secret key
 #   AWS_ACCOUNT_ID          800445863339
-#   GH_PAT              GitHub Personal Access Token (classic, repo scope)
-#                           Create at: https://github.com/settings/tokens
-#                           Needed once to connect Amplify to the GitHub repo.
+#   GH_PAT                  GitHub PAT (classic, repo scope) — needed once to
+#                           connect Amplify to the GitHub repo
 #
 # Optional GitHub variables (Settings -> Variables -> Actions):
 #   ENVIRONMENT   dev        (default)
@@ -34,12 +28,12 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION:    "20"
-  AWS_REGION:      ${{ vars.AWS_REGION || 'us-east-1' }}
-  ENVIRONMENT:     ${{ vars.ENVIRONMENT || 'dev' }}
-  AMPLIFY_APP_ID:  d3m1ddehppkb04
-  REPO_URL:        https://github.com/florayuyuun123/docuquery-rag-assistant
-  BRANCH:          main
+  NODE_VERSION: "20"
+  AWS_REGION:   ${{ vars.AWS_REGION || 'us-east-1' }}
+  ENVIRONMENT:  ${{ vars.ENVIRONMENT || 'dev' }}
+  BRANCH:       main
+  # Repo URL is derived from the GitHub context — no hardcoding
+  REPO_URL:     ${{ github.server_url }}/${{ github.repository }}
 
 jobs:
   # ── 1. CI gate ─────────────────────────────────────────────────────────────
@@ -80,16 +74,15 @@ jobs:
           VITE_API_URL:               https://placeholder.execute-api.us-east-1.amazonaws.com/dev/
           VITE_DOCUMENT_BUCKET_NAME:  placeholder-bucket
 
-  # ── 2. Connect Amplify to GitHub (idempotent) ──────────────────────────────
-  # Requires the GH_PAT secret to be set (Settings -> Secrets -> Actions).
-  # If the secret is missing the step is skipped gracefully — the rest of the
-  # pipeline (CDK deploy, Amplify monitor) continues unaffected.
-  connect-amplify:
-    name: Connect Amplify to GitHub
+  # ── 2. Discover Knowledge Base ID ──────────────────────────────────────────
+  # Lists Bedrock KBs by name docuquery-{env}. If the KB doesn't exist yet
+  # (first deploy), returns empty — CDK uses a wildcard ARN in that case.
+  discover-kb:
+    name: Discover KB ID
     runs-on: ubuntu-latest
     needs: ci
-    env:
-      GH_PAT: ${{ secrets.GH_PAT }}
+    outputs:
+      kb_id: ${{ steps.kb.outputs.kb_id }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -97,65 +90,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Wire GitHub repo to Amplify app (idempotent)
+      - name: Find Knowledge Base by name
+        id: kb
         run: |
-          # Skip entirely if GH_PAT secret is not configured yet.
-          # Add it at: Settings -> Secrets and variables -> Actions -> GH_PAT
-          if [ -z "$GH_PAT" ]; then
-            echo "GH_PAT secret is not set — skipping Amplify GitHub connection."
-            echo "To enable automatic frontend deploys, add a GitHub PAT (classic, repo scope)"
-            echo "as a repository secret named GH_PAT."
-            exit 0
-          fi
+          KB_NAME="docuquery-${ENVIRONMENT}"
+          KB_ID=$(aws bedrock-agent list-knowledge-bases \
+            --query "knowledgeBaseSummaries[?name=='${KB_NAME}'].knowledgeBaseId" \
+            --output text 2>/dev/null || echo "")
 
-          # Check if repo is already connected
-          CURRENT_REPO=$(aws amplify get-app \
-            --app-id "$AMPLIFY_APP_ID" \
-            --query 'app.repository' --output text)
-
-          if [ "$CURRENT_REPO" = "$REPO_URL" ]; then
-            echo "Amplify already connected to $REPO_URL — skipping."
+          if [ -z "$KB_ID" ] || [ "$KB_ID" = "None" ]; then
+            echo "No Knowledge Base named '${KB_NAME}' found — CDK will use wildcard ARN."
+            echo "kb_id=" >> $GITHUB_OUTPUT
           else
-            echo "Connecting Amplify to $REPO_URL ..."
-            aws amplify update-app \
-              --app-id "$AMPLIFY_APP_ID" \
-              --repository "$REPO_URL" \
-              --access-token "$GH_PAT" \
-              --enable-branch-auto-build \
-              --enable-branch-auto-deletion
-            echo "Amplify app updated."
+            echo "Found Knowledge Base: ${KB_ID}"
+            echo "kb_id=${KB_ID}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create/verify main branch in Amplify (idempotent)
-        run: |
-          if [ -z "$GH_PAT" ]; then
-            echo "GH_PAT not set — skipping branch creation."
-            exit 0
-          fi
-
-          BRANCH_EXISTS=$(aws amplify list-branches \
-            --app-id "$AMPLIFY_APP_ID" \
-            --query "branches[?branchName=='$BRANCH'].branchName" \
-            --output text)
-
-          if [ -n "$BRANCH_EXISTS" ]; then
-            echo "Branch '$BRANCH' already connected — skipping."
-          else
-            echo "Creating branch '$BRANCH' in Amplify..."
-            aws amplify create-branch \
-              --app-id "$AMPLIFY_APP_ID" \
-              --branch-name "$BRANCH" \
-              --enable-auto-build \
-              --framework "React" \
-              --stage PRODUCTION
-            echo "Branch created."
-          fi
-
-  # ── 3. CDK deploy (infra changes only) ────────────────────────────────────
+  # ── 3. CDK deploy ──────────────────────────────────────────────────────────
+  # Deploys (or updates) the full stack. The Amplify App ID is captured from
+  # CDK outputs for downstream jobs.
   deploy-infra:
     name: CDK Deploy
     runs-on: ubuntu-latest
-    needs: connect-amplify
+    needs: [ci, discover-kb]
+    outputs:
+      amplify_app_id: ${{ steps.outputs.outputs.amplify_app_id }}
+      bucket_name:    ${{ steps.outputs.outputs.bucket_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -176,27 +136,45 @@ jobs:
       - name: Build shared package
         run: npm run build --workspace=shared
 
-      # KB ID is already known — no two-pass deploy needed since infra is live.
-      # CDK detects no changes and completes in ~15 seconds when nothing changed.
       - name: CDK deploy
         working-directory: infra
         run: |
+          # Build KB ID context arg (empty string if KB doesn't exist yet)
+          KB_CONTEXT=""
+          if [ -n "${{ needs.discover-kb.outputs.kb_id }}" ]; then
+            KB_CONTEXT="--context knowledgeBaseId=${{ needs.discover-kb.outputs.kb_id }}"
+          fi
+
           npx cdk deploy \
             --require-approval never \
             --context environment=${{ env.ENVIRONMENT }} \
             --context awsRegion=${{ env.AWS_REGION }} \
             --context awsAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
-            --context knowledgeBaseId=LPLGCWRHOM \
             --context repoUrl=${{ env.REPO_URL }} \
-            --context branch=${{ env.BRANCH }}
+            --context branch=${{ env.BRANCH }} \
+            $KB_CONTEXT \
+            --outputs-file ../cdk-outputs.json
 
-  # ── 4. Monitor Amplify build ───────────────────────────────────────────────
-  # After connect-amplify wires the repo, Amplify triggers its own build
-  # automatically on every push via GitHub webhook. This job just monitors it.
-  monitor-amplify:
-    name: Monitor Amplify Build
+      - name: Parse CDK outputs
+        id: outputs
+        run: |
+          AMPLIFY=$(jq -r '.DocuQueryStack.AmplifyAppId' cdk-outputs.json)
+          BUCKET=$(jq -r '.DocuQueryStack.DocumentBucketName' cdk-outputs.json)
+          echo "amplify_app_id=$AMPLIFY" >> $GITHUB_OUTPUT
+          echo "bucket_name=$BUCKET"    >> $GITHUB_OUTPUT
+          echo "Amplify App ID: $AMPLIFY"
+          echo "Bucket: $BUCKET"
+
+  # ── 4. Connect Amplify to GitHub (idempotent) ──────────────────────────────
+  # Uses the Amplify App ID discovered from CDK outputs above.
+  # Skips gracefully if GH_PAT is not set.
+  connect-amplify:
+    name: Connect Amplify to GitHub
     runs-on: ubuntu-latest
-    needs: [connect-amplify, deploy-infra]
+    needs: deploy-infra
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      AMPLIFY_APP_ID: ${{ needs.deploy-infra.outputs.amplify_app_id }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -204,16 +182,87 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Wait for Amplify build to complete
+      - name: Wire GitHub repo to Amplify app
         run: |
-          echo "Waiting for Amplify to start a build for commit $GITHUB_SHA ..."
-          sleep 30  # give Amplify time to pick up the push webhook
+          if [ -z "$GH_PAT" ]; then
+            echo "GH_PAT not set — skipping Amplify GitHub connection."
+            exit 0
+          fi
 
-          # Find the latest job for the branch
+          if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "null" ]; then
+            echo "No Amplify App ID found — skipping."
+            exit 0
+          fi
+
+          CURRENT_REPO=$(aws amplify get-app \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query 'app.repository' --output text 2>/dev/null || echo "")
+
+          if [ "$CURRENT_REPO" = "$REPO_URL" ]; then
+            echo "Amplify already connected to $REPO_URL — skipping."
+          else
+            echo "Connecting Amplify to $REPO_URL ..."
+            aws amplify update-app \
+              --app-id "$AMPLIFY_APP_ID" \
+              --repository "$REPO_URL" \
+              --access-token "$GH_PAT" \
+              --enable-branch-auto-build \
+              --enable-branch-auto-deletion
+            echo "Amplify app updated."
+          fi
+
+      - name: Create/verify branch in Amplify
+        run: |
+          if [ -z "$GH_PAT" ] || [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "null" ]; then
+            exit 0
+          fi
+
+          BRANCH_EXISTS=$(aws amplify list-branches \
+            --app-id "$AMPLIFY_APP_ID" \
+            --query "branches[?branchName=='${BRANCH}'].branchName" \
+            --output text 2>/dev/null || echo "")
+
+          if [ -n "$BRANCH_EXISTS" ]; then
+            echo "Branch '${BRANCH}' already connected — skipping."
+          else
+            echo "Creating branch '${BRANCH}' in Amplify..."
+            aws amplify create-branch \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name "${BRANCH}" \
+              --enable-auto-build \
+              --framework "React" \
+              --stage PRODUCTION
+            echo "Branch created."
+          fi
+
+  # ── 5. Monitor Amplify build ───────────────────────────────────────────────
+  monitor-amplify:
+    name: Monitor Amplify Build
+    runs-on: ubuntu-latest
+    needs: [connect-amplify, deploy-infra]
+    env:
+      AMPLIFY_APP_ID: ${{ needs.deploy-infra.outputs.amplify_app_id }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Wait for Amplify build
+        run: |
+          if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "null" ]; then
+            echo "No Amplify App ID — skipping."
+            exit 0
+          fi
+
+          echo "Waiting for Amplify build..."
+          sleep 30
+
           for attempt in $(seq 1 3); do
             JOB_ID=$(aws amplify list-jobs \
               --app-id "$AMPLIFY_APP_ID" \
-              --branch-name "$BRANCH" \
+              --branch-name "${BRANCH}" \
               --max-results 1 \
               --query 'jobSummaries[0].jobId' \
               --output text 2>/dev/null || echo "")
@@ -228,32 +277,24 @@ jobs:
             echo "No Amplify build found — triggering manually..."
             JOB_ID=$(aws amplify start-job \
               --app-id "$AMPLIFY_APP_ID" \
-              --branch-name "$BRANCH" \
+              --branch-name "${BRANCH}" \
               --job-type RELEASE \
               --query 'jobSummary.jobId' \
               --output text)
-            echo "Started job: $JOB_ID"
-          else
-            echo "Found Amplify job: $JOB_ID"
           fi
 
-          # Poll until SUCCEED or FAILED (max 15 min)
+          echo "Monitoring job: $JOB_ID"
           for i in $(seq 1 45); do
             STATUS=$(aws amplify get-job \
               --app-id "$AMPLIFY_APP_ID" \
-              --branch-name "$BRANCH" \
+              --branch-name "${BRANCH}" \
               --job-id "$JOB_ID" \
               --query 'job.summary.status' \
               --output text)
             echo "  [$i/45] Amplify status: $STATUS"
             case "$STATUS" in
               SUCCEED)
-                APP_URL=$(aws amplify get-branch \
-                  --app-id "$AMPLIFY_APP_ID" \
-                  --branch-name "$BRANCH" \
-                  --query 'branch.displayName' \
-                  --output text 2>/dev/null || echo "")
-                echo "Amplify build succeeded."
+                echo "Amplify build succeeded!"
                 echo "App URL: https://${BRANCH}.${AMPLIFY_APP_ID}.amplifyapp.com"
                 exit 0 ;;
               FAILED|CANCELLED)

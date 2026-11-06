@@ -385,17 +385,23 @@ export class DocuQueryStack extends cdk.Stack {
           status: '200',
         },
       ],
-      buildSpec: JSON.stringify({
-        version: 1,
-        frontend: {
-          phases: {
-            preBuild: { commands: ['npm ci'] },
-            build: { commands: ['npm run build --workspace=frontend'] },
-          },
-          artifacts: { baseDirectory: 'frontend/dist', files: ['**/*'] },
-          cache: { paths: ['node_modules/**/*'] },
-        },
-      }),
+      buildSpec: `version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+        - npm run build --workspace=shared
+    build:
+      commands:
+        - npm run build --workspace=frontend
+  artifacts:
+    baseDirectory: frontend/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*`,
       environmentVariables: [
         { name: 'VITE_USER_POOL_ID', value: userPool.userPoolId },
         { name: 'VITE_USER_POOL_CLIENT_ID', value: userPoolClient.userPoolClientId },

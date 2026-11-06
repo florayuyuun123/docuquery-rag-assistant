@@ -20,17 +20,17 @@ flowchart TB
         Browser["React 18 + TypeScript SPA"]
     end
 
-    subgraph Hosting["AWS Amplify Hosting  (App: d3m1ddehppkb04)"]
+    subgraph Hosting["AWS Amplify Hosting  (App: d2aorcdg8vm2l4)"]
         Amplify["Amplify CDN"]
     end
 
     subgraph Auth["Amazon Cognito"]
-        UserPool["User Pool\ndocuquery-dev\nus-east-1_mBss1Hu0l"]
+        UserPool["User Pool\ndocuquery-dev\nus-east-1_kc9C1KHxz"]
         IdentityPool["Identity Pool"]
     end
 
     subgraph API["Amazon API Gateway REST  —  docuquery-dev"]
-        APIGW["REST API\nhttps://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/"]
+        APIGW["REST API\nhttps://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/"]
         Authorizer["Cognito JWT Authorizer"]
     end
 
@@ -43,18 +43,18 @@ flowchart TB
     end
 
     subgraph Storage["Storage"]
-        S3["Amazon S3\ndocuquerystack-documentbucketae41e5a9-y4e69bwevqic\nSSE-S3 · Block Public Access"]
+        S3["Amazon S3\ndocuquerystack-documentbucketae41e5a9-2fj13ymhn5u2\nSSE-S3 · Block Public Access"]
         DDB["Amazon DynamoDB\ndocuquery-dev\nPAY_PER_REQUEST · GSI: userId-createdAt"]
     end
 
     subgraph Bedrock["Amazon Bedrock"]
         Titan["Titan Embeddings V2\namazon.titan-embed-text-v2:0\n1024-dim vectors"]
         Claude["Claude 3 Haiku\nanthropic.claude-3-haiku-20240307-v1:0\nRAG answer generation"]
-        KB["Bedrock Knowledge Base\ndocuquery-dev · ID: LPLGCWRHOM"]
+        KB["Bedrock Knowledge Base\ndocuquery-dev · ID: GWCJWPQZSF"]
     end
 
     subgraph VectorStore["Amazon OpenSearch Serverless"]
-        AOSS["Collection: docuquery-vectors\nID: h04acuqvvvd64qsauu2k\nIndex: docuquery-index · HNSW/faiss · 1024-dim"]
+        AOSS["Collection: docuquery-vectors\nID: 9uh8a5ei1z5qh6luc4b4\nIndex: docuquery-index · HNSW/faiss · 1024-dim"]
     end
 
     subgraph OCR["Amazon Textract"]
@@ -142,15 +142,15 @@ flowchart TB
 
 | Service | Resource name | ID / ARN fragment |
 |---------|--------------|------------------|
-| Cognito User Pool | `docuquery-dev` | `us-east-1_mBss1Hu0l` |
-| Cognito App Client | — | `5jgr5ml0r123hmn2blj720r1du` |
-| Cognito Identity Pool | — | `us-east-1:3ebd9bf1-a612-4f1f-8a41-8cf46e9cce43` |
-| API Gateway | `docuquery-dev` | `https://2u9omiey76.execute-api.us-east-1.amazonaws.com/dev/` |
-| S3 Document Bucket | `docuquerystack-documentbucketae41e5a9-y4e69bwevqic` | `arn:aws:s3:::docuquerystack-...` |
+| Cognito User Pool | `docuquery-dev` | `us-east-1_kc9C1KHxz` |
+| Cognito App Client | — | `6kunv07r1at24o6srco0kkc6i4` |
+| Cognito Identity Pool | — | `us-east-1:89cefc81-e969-4864-b770-4a0276e48c5f` |
+| API Gateway | `docuquery-dev` | `https://r3btd92wdh.execute-api.us-east-1.amazonaws.com/dev/` |
+| S3 Document Bucket | `docuquerystack-documentbucketae41e5a9-2fj13ymhn5u2` | `arn:aws:s3:::docuquerystack-...` |
 | DynamoDB Table | `docuquery-dev` | `arn:aws:dynamodb:us-east-1:800445863339:table/docuquery-dev` |
-| Bedrock Knowledge Base | `docuquery-dev` | `LPLGCWRHOM` |
-| AOSS Collection | `docuquery-vectors` | `h04acuqvvvd64qsauu2k` |
-| Amplify App | `docuquery-dev` | `d3m1ddehppkb04` |
+| Bedrock Knowledge Base | `docuquery-dev` | `GWCJWPQZSF` |
+| AOSS Collection | `docuquery-vectors` | `9uh8a5ei1z5qh6luc4b4` |
+| Amplify App | `docuquery-dev` | `d2aorcdg8vm2l4` |
 | CloudFormation Stack | `DocuQueryStack` | `arn:aws:cloudformation:us-east-1:800445863339:stack/DocuQueryStack/...` |
 
 ## Data Flow Summary
