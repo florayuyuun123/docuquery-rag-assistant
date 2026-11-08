@@ -252,6 +252,7 @@ export class DocuQueryStack extends cdk.Stack {
       ...fnBase,
       functionName: `docuquery-documents-${props.environment}`,
       entry: path.join(backendDir, 'src', 'documents', 'handler.ts'),
+      timeout: cdk.Duration.seconds(60),
       role: docsRole,
       logGroup: new logs.LogGroup(this, 'DocumentsLogGroup', {
         logGroupName: `/aws/lambda/docuquery-documents-${props.environment}`,

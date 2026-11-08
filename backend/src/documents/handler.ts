@@ -62,8 +62,10 @@ async function startIngestionWithRetry(
         (error.name === 'ValidationException' && (error.message ?? '').includes('Too many requests'));
       const isConflict = error.name === 'ConflictException';
       if ((isThrottle || isConflict) && attempt < maxAttempts) {
-        const baseDelay = isConflict ? 15000 : 1000;
-        const delayMs = Math.min(baseDelay * 2 ** (attempt - 1), 60000);
+        // ConflictException: KB has a running job, wait 10s then retry (max 30s)
+        // ThrottlingException: wait 2s then retry with backoff (max 15s)
+        const baseDelay = isConflict ? 10000 : 2000;
+        const delayMs = Math.min(baseDelay * attempt, isConflict ? 30000 : 15000);
         await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
@@ -146,15 +148,18 @@ export const handler = withMiddleware('documents-fn', async (event, _context, co
       }),
     );
 
-    // 2. Trigger KB re-sync so chunks for the deleted file are removed
-    // (StartIngestionJobCommand picks up S3 deletions on the next sync)
-    await startIngestionWithRetry(
+    // 2. Trigger KB re-sync so chunks for the deleted file are removed.
+    // Fire-and-forget — never block the delete response on KB sync success.
+    // The KB will be eventually consistent once the next sync completes.
+    void startIngestionWithRetry(
       new StartIngestionJobCommand({
         knowledgeBaseId: KNOWLEDGE_BASE_ID,
         dataSourceId: DATA_SOURCE_ID,
         description: `Remove document ${documentId} chunks from KB`,
       }),
-    );
+    ).catch(() => {
+      // Best-effort — KB sync failure does not block the delete
+    });
 
     // 3. Delete DynamoDB record
     await dynamo.send(

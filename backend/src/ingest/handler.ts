@@ -94,9 +94,10 @@ async function startIngestionWithRetry(
         (error.name === 'ValidationException' && (error.message ?? '').includes('Too many requests'));
       const isConflict = error.name === 'ConflictException';
       if ((isThrottle || isConflict) && attempt < maxAttempts) {
-        // ConflictException means a job is already running — wait longer before retrying
-        const baseDelay = isConflict ? 15000 : 1000;
-        const delayMs = Math.min(baseDelay * 2 ** (attempt - 1), 60000);
+        // ConflictException: KB has a running job, wait 10s then retry (max 30s)
+        // ThrottlingException: wait 2s then retry with backoff (max 15s)
+        const baseDelay = isConflict ? 10000 : 2000;
+        const delayMs = Math.min(baseDelay * attempt, isConflict ? 30000 : 15000);
         await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
