@@ -72,6 +72,34 @@ function parseS3Key(key: string): { userId: string; documentId: string } | null 
   return { userId: match[1], documentId: match[2] };
 }
 
+
+/**
+ * Retry a Bedrock StartIngestionJob call with exponential backoff.
+ * Bedrock throttles at ~1 req/sec on new accounts — 429s are wrapped as ValidationException.
+ */
+async function startIngestionWithRetry(
+  command: StartIngestionJobCommand,
+  maxAttempts = 5,
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await bedrockAgent.send(command);
+      return;
+    } catch (err) {
+      const error = err as Error & { name?: string; message?: string };
+      const isThrottle =
+        error.name === 'ThrottlingException' ||
+        (error.name === 'ValidationException' && (error.message ?? '').includes('Too many requests'));
+      if (isThrottle && attempt < maxAttempts) {
+        const delayMs = Math.min(1000 * 2 ** attempt, 30000); // 2s, 4s, 8s, 16s, 30s
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export const handler = async (event: S3Event): Promise<void> => {
   for (const record of event.Records) {
     const bucketName = record.s3.bucket.name;
@@ -169,7 +197,7 @@ export const handler = async (event: S3Event): Promise<void> => {
 
       // Start Bedrock Knowledge Base ingestion job
       // The KB datasource is the S3 bucket — re-syncing will pick up the new file
-      await bedrockAgent.send(
+      await startIngestionWithRetry(
         new StartIngestionJobCommand({
           knowledgeBaseId: KNOWLEDGE_BASE_ID,
           dataSourceId: DATA_SOURCE_ID,
@@ -206,7 +234,7 @@ export const handler = async (event: S3Event): Promise<void> => {
       // the KB datasource. After the S3 object is eventually deleted/replaced,
       // a subsequent sync will remove its chunks from the index.
       try {
-        await bedrockAgent.send(
+        await startIngestionWithRetry(
           new StartIngestionJobCommand({
             knowledgeBaseId: KNOWLEDGE_BASE_ID,
             dataSourceId: DATA_SOURCE_ID,

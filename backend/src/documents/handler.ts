@@ -40,6 +40,34 @@ const BUCKET_NAME = process.env['BUCKET_NAME'] ?? '';
 const KNOWLEDGE_BASE_ID = process.env['KNOWLEDGE_BASE_ID'] ?? '';
 const DATA_SOURCE_ID = process.env['DATA_SOURCE_ID'] ?? '';
 
+
+/**
+ * Retry a Bedrock StartIngestionJob call with exponential backoff.
+ * Bedrock throttles at ~1 req/sec on new accounts — 429s are wrapped as ValidationException.
+ */
+async function startIngestionWithRetry(
+  command: StartIngestionJobCommand,
+  maxAttempts = 5,
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await bedrockAgent.send(command);
+      return;
+    } catch (err) {
+      const error = err as Error & { name?: string; message?: string };
+      const isThrottle =
+        error.name === 'ThrottlingException' ||
+        (error.name === 'ValidationException' && (error.message ?? '').includes('Too many requests'));
+      if (isThrottle && attempt < maxAttempts) {
+        const delayMs = Math.min(1000 * 2 ** attempt, 30000);
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export const handler = withMiddleware('documents-fn', async (event, _context, correlationId): Promise<APIGatewayProxyResult> => {
   const claims = event.requestContext?.authorizer?.claims as Record<string, string> | undefined;
   const userId = claims?.['sub'];
@@ -116,7 +144,7 @@ export const handler = withMiddleware('documents-fn', async (event, _context, co
 
     // 2. Trigger KB re-sync so chunks for the deleted file are removed
     // (StartIngestionJobCommand picks up S3 deletions on the next sync)
-    await bedrockAgent.send(
+    await startIngestionWithRetry(
       new StartIngestionJobCommand({
         knowledgeBaseId: KNOWLEDGE_BASE_ID,
         dataSourceId: DATA_SOURCE_ID,
