@@ -1,0 +1,297 @@
+<mxfile host="app.diagrams.net" modified="2026-11-08T13:00:00.000Z" agent="Mozilla/5.0" version="22.1.11" type="device">
+  <diagram name="DocuQuery Architecture" id="docuquery-arch">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TITLE
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="title" value="DocuQuery RAG Assistant — AWS Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="427" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TIER 1 — USER / FRONTEND
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="tier1-bg" value="Tier 1 — Frontend &amp; Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;verticalAlign=top;fontStyle=1;fontSize=13;align=left;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="1530" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- User -->
+        <mxCell id="user" value="User" style="shape=mxgraph.aws4.user;fillColor=#232F3D;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="120" width="60" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Amplify -->
+        <mxCell id="amplify" value="AWS Amplify&#xa;React 18 SPA&#xa;d2w3nvd0nztgjp" style="shape=mxgraph.aws4.amplify;fillColor=#FF9900;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="280" y="120" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Cognito -->
+        <mxCell id="cognito" value="Amazon Cognito&#xa;User Pool&#xa;us-east-1_LNk23zVUR" style="shape=mxgraph.aws4.cognito;fillColor=#DD344C;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="520" y="120" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- CloudFront (Amplify CDN) -->
+        <mxCell id="cloudfront" value="CloudFront&#xa;(via Amplify)" style="shape=mxgraph.aws4.cloudfront;fillColor=#8C4FFF;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="380" y="120" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TIER 2 — API GATEWAY
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="tier2-bg" value="Tier 2 — API Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;verticalAlign=top;fontStyle=1;fontSize=13;align=left;" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="1530" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="apigw" value="API Gateway REST&#xa;5tgtkxf6m8&#xa;/dev stage" style="shape=mxgraph.aws4.api_gateway;fillColor=#E7157B;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="305" width="80" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Routes labels -->
+        <mxCell id="routes" value="POST /upload-url  |  GET/DELETE /documents  |  POST /query  |  GET /history" style="text;html=1;strokeColor=#1565C0;fillColor=#BBDEFB;align=center;verticalAlign=middle;rounded=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="355" width="580" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TIER 3 — LAMBDA FUNCTIONS
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="tier3-bg" value="Tier 3 — Compute (Lambda Node.js 20 ARM64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F9A825;verticalAlign=top;fontStyle=1;fontSize=13;align=left;" vertex="1" parent="1">
+          <mxGeometry x="60" y="460" width="1530" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- upload-url-fn -->
+        <mxCell id="fn-upload" value="upload-url-fn&#xa;29s / 256MB" style="shape=mxgraph.aws4.lambda_function;fillColor=#FF9900;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="120" y="510" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- documents-fn -->
+        <mxCell id="fn-docs" value="documents-fn&#xa;60s / 512MB" style="shape=mxgraph.aws4.lambda_function;fillColor=#FF9900;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="380" y="510" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ingest-fn -->
+        <mxCell id="fn-ingest" value="ingest-fn&#xa;5min / 1024MB&#xa;(S3 trigger)" style="shape=mxgraph.aws4.lambda_function;fillColor=#FF9900;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="640" y="510" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- query-fn -->
+        <mxCell id="fn-query" value="query-fn&#xa;29s / 512MB&#xa;(RAG core)" style="shape=mxgraph.aws4.lambda_function;fillColor=#FF9900;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="510" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- history-fn -->
+        <mxCell id="fn-history" value="history-fn&#xa;29s / 256MB" style="shape=mxgraph.aws4.lambda_function;fillColor=#FF9900;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="510" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TIER 4 — STORAGE & DATA
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="tier4-bg" value="Tier 4 — Storage &amp; Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C62828;verticalAlign=top;fontStyle=1;fontSize=13;align=left;" vertex="1" parent="1">
+          <mxGeometry x="60" y="690" width="1530" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- S3 -->
+        <mxCell id="s3" value="Amazon S3&#xa;Document Storage&#xa;SSE-S3 encrypted" style="shape=mxgraph.aws4.bucket;fillColor=#3F8624;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="120" y="740" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- DynamoDB -->
+        <mxCell id="dynamo" value="Amazon DynamoDB&#xa;Single Table&#xa;docuquery-dev" style="shape=mxgraph.aws4.dynamodb;fillColor=#4D27A8;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="380" y="740" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Bedrock KB -->
+        <mxCell id="bedrock-kb" value="Bedrock&#xa;Knowledge Base&#xa;C6KSVKHWW4" style="shape=mxgraph.aws4.bedrock;fillColor=#01A88D;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="640" y="740" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- OpenSearch -->
+        <mxCell id="opensearch" value="OpenSearch&#xa;Serverless&#xa;docuquery-vectors" style="shape=mxgraph.aws4.opensearch_service;fillColor=#8C4FFF;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="740" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TIER 5 — AI / ML
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="tier5-bg" value="Tier 5 — AI / ML (Amazon Bedrock)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#6A1B9A;verticalAlign=top;fontStyle=1;fontSize=13;align=left;" vertex="1" parent="1">
+          <mxGeometry x="60" y="920" width="1530" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- Titan Embeddings -->
+        <mxCell id="titan" value="Titan Embeddings V2&#xa;1024 dimensions&#xa;cl100k_base tokens" style="shape=mxgraph.aws4.bedrock;fillColor=#01A88D;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="380" y="970" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Claude 3 Haiku -->
+        <mxCell id="claude" value="Claude 3 Haiku&#xa;RAG generation&#xa;max 2048 tokens" style="shape=mxgraph.aws4.bedrock;fillColor=#01A88D;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="640" y="970" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Textract (optional) -->
+        <mxCell id="textract" value="Textract&#xa;(OCR — optional)&#xa;Not enabled" style="shape=mxgraph.aws4.textract;fillColor=#01A88D;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="900" y="970" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- CloudWatch -->
+        <mxCell id="cloudwatch" value="CloudWatch Logs&#xa;Structured JSON&#xa;30-day retention" style="shape=mxgraph.aws4.cloudwatch;fillColor=#E7157B;strokeColor=none;fontColor=#232F3E;labelPosition=center;align=center;verticalLabelPosition=bottom;verticalAlign=top;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="510" width="70" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             CONNECTIONS
+        ═══════════════════════════════════════════════════════════ -->
+
+        <!-- User → Amplify -->
+        <mxCell id="e1" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;rounded=1;fontSize=10;" edge="1" parent="1" source="user" target="amplify">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Amplify → CloudFront -->
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;" edge="1" parent="1" source="amplify" target="cloudfront">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Amplify → Cognito (auth) -->
+        <mxCell id="e3" value="idToken" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;" edge="1" parent="1" source="amplify" target="cognito">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Amplify → API GW -->
+        <mxCell id="e4" value="JWT Bearer" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="amplify" target="apigw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cognito → API GW (validate) -->
+        <mxCell id="e5" value="validate" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;" edge="1" parent="1" source="cognito" target="apigw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API GW → Lambdas -->
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;" edge="1" parent="1" source="apigw" target="fn-upload">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;" edge="1" parent="1" source="apigw" target="fn-docs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;" edge="1" parent="1" source="apigw" target="fn-query">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;" edge="1" parent="1" source="apigw" target="fn-history">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- upload-fn → S3 (presigned URL) -->
+        <mxCell id="e10" value="presigned URL" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="fn-upload" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- S3 → ingest-fn (event trigger) -->
+        <mxCell id="e11" value="S3 ObjectCreated&#xa;event" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;strokeColor=#F9A825;" edge="1" parent="1" source="s3" target="fn-ingest">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ingest-fn → S3 (read file) -->
+        <mxCell id="e12" value="GetObject" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;" edge="1" parent="1" source="fn-ingest" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="675" y="780" />
+              <mxPoint x="155" y="780" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ingest-fn → DynamoDB (status update) -->
+        <mxCell id="e13" value="status update" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="fn-ingest" target="dynamo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ingest-fn → Bedrock KB -->
+        <mxCell id="e14" value="StartIngestionJob&#xa;(retry + backoff)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;strokeColor=#01A88D;" edge="1" parent="1" source="fn-ingest" target="bedrock-kb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- docs-fn → DynamoDB -->
+        <mxCell id="e15" value="CRUD" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="fn-docs" target="dynamo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- docs-fn → S3 (delete) -->
+        <mxCell id="e16" value="DeleteObject" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="fn-docs" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- docs-fn → Bedrock KB (fire-and-forget) -->
+        <mxCell id="e17" value="KB sync&#xa;(fire-and-forget)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;strokeColor=#01A88D;" edge="1" parent="1" source="fn-docs" target="bedrock-kb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- query-fn → DynamoDB -->
+        <mxCell id="e18" value="save/read chat" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="fn-query" target="dynamo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- query-fn → Bedrock KB (retrieve) -->
+        <mxCell id="e19" value="Retrieve (top-5)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;strokeColor=#01A88D;" edge="1" parent="1" source="fn-query" target="bedrock-kb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Bedrock KB → OpenSearch -->
+        <mxCell id="e20" value="vector search" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="bedrock-kb" target="opensearch">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Bedrock KB → Titan (embed) -->
+        <mxCell id="e21" value="embed chunks" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="bedrock-kb" target="titan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- query-fn → Claude -->
+        <mxCell id="e22" value="InvokeModel&#xa;RAG prompt" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;strokeColor=#6A1B9A;" edge="1" parent="1" source="fn-query" target="claude">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- history-fn → DynamoDB -->
+        <mxCell id="e23" value="query chat history" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;" edge="1" parent="1" source="fn-history" target="dynamo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- All Lambdas → CloudWatch -->
+        <mxCell id="e24" value="structured logs" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;strokeColor=#E7157B;" edge="1" parent="1" source="fn-upload" target="cloudwatch">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ingest → Textract (optional) -->
+        <mxCell id="e25" value="OCR fallback&#xa;(not enabled)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;fontSize=10;dashed=1;strokeColor=#999999;" edge="1" parent="1" source="fn-ingest" target="textract">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             LEGEND
+        ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="legend-bg" value="Legend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#616161;verticalAlign=top;fontStyle=1;align=left;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="740" width="420" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="───────► Synchronous call" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="775" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="- - - - ► Async / Event / Fire-and-forget" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="800" width="320" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="🔴 Delete: S3 + DynamoDB always succeed; KB sync best-effort" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="825" width="380" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="🟡 Textract: optional OCR, not currently enabled" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="850" width="380" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="🔵 All Lambdas: Node.js 20, ARM64, CloudWatch logs" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="875" width="380" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

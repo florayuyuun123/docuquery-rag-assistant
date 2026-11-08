@@ -8,57 +8,47 @@
 
 ## 🎯 Project Status
 
-**Current Status:** ⚠️ **Development - Deployment Paused**
+**Current Status:** 🟡 **Deployed — Upload/Ingest Under Investigation**
 
-The infrastructure has been cleaned up and is ready for re-deployment. All code fixes have been committed and are ready to deploy.
+All infrastructure is deployed and running. Authentication, listing, and delete work correctly. Upload ingestion is encountering Bedrock rate-limiting (429/409) on the new account.
 
-### Recent Updates (2026-11-06)
+### Deployed Resources (2026-11-08)
 
-✅ **Completed Fixes:**
-- Switched from `tiktoken` (WASM) to `js-tiktoken` (pure JS) for Lambda compatibility
-- Fixed authentication: now using `idToken` instead of `accessToken` for Cognito authorizer
-- Added CORS headers to all Lambda responses
-- Fixed `DATA_SOURCE_ID` bug in ingest and delete handlers
-- Made AWS Textract optional (graceful fallback when not enabled)
-- Fixed document list filtering (DOC# vs CHAT# records)
-- Fixed presigned URL ContentLength signature issue
-- All 62 tests passing
+| Resource | ID |
+|---|---|
+| Frontend | https://main.d2w3nvd0nztgjp.amplifyapp.com |
+| API Gateway | https://5tgtkxf6m8.execute-api.us-east-1.amazonaws.com/dev/ |
+| Cognito User Pool | `us-east-1_LNk23zVUR` |
+| S3 Bucket | `docuquerystack-documentbucketae41e5a9-sfm67ewqxdwe` |
+| Bedrock KB | `C6KSVKHWW4` (ACTIVE) |
+| Data Source | `HQRNCKCIII` |
+| OpenSearch Collection | `9uh8a5ei1z5qh6luc4b4` (ACTIVE) |
 
-🚧 **Known Limitations:**
-- AWS Textract not enabled on current account → PDFs with text layers work via `pdf-parse`, scanned PDFs return empty
-- Delete operation requires `DATA_SOURCE_ID` env var to be set correctly
+### All Fixes Applied
 
-🔄 **Next Deployment Steps:**
-1. Re-run `cdk deploy` with KB and Data Source IDs
-2. Test upload → ingest → query → delete flow end-to-end
-3. Enable Textract if OCR support needed for scanned PDFs
+| # | Issue | Fix | Status |
+|---|---|---|---|
+| 1 | Auth 401 — wrong token type | `accessToken` → `idToken` | ✅ |
+| 2 | CORS blocking API calls | Added `Access-Control-Allow-Origin` to middleware | ✅ |
+| 3 | Lambda bundling — tiktoken WASM | Switched to `js-tiktoken` (pure JS) | ✅ |
+| 4 | `DATA_SOURCE_ID` bug | Added env var, used in all handlers | ✅ |
+| 5 | Document list mixed with chat records | Added `begins_with(SK, 'DOC#')` filter | ✅ |
+| 6 | S3 presigned URL signature error | Removed `ContentLength` from signed headers | ✅ |
+| 7 | Textract not available | Made optional — graceful fallback | ✅ |
+| 8 | Delete blocks on KB sync (timeout) | KB sync is now fire-and-forget | ✅ |
+| 9 | Bedrock 429 ThrottlingException | Exponential backoff retry (up to 8 attempts) | ✅ |
+| 10 | Bedrock 409 ConflictException | Added to retry logic with 10s base delay | ✅ |
+| 11 | Documents Lambda 29s timeout | Increased to 60s | ✅ |
 
-### Latest Session Summary (2026-11-06)
+### Known Limitations
 
-**Issues Resolved:**
-1. ✅ Authentication token mismatch (accessToken → idToken)
-2. ✅ CORS policy blocking API requests (added headers to middleware)
-3. ✅ Lambda bundling failures (tiktoken WASM → js-tiktoken pure JS)
-4. ✅ DATA_SOURCE_ID confusion in ingest/delete handlers
-5. ✅ Document list contaminated with chat records (added SK filter)
-6. ✅ S3 upload signature errors (removed ContentLength from presigned URL)
-7. ✅ Textract subscription requirement (made optional with graceful fallback)
+- **Scanned PDFs**: No text layer → empty extraction → `failed`. Textract not enabled on account. Use PDFs with selectable text, or DOCX/TXT files.
+- **Bedrock rate limits**: New AWS accounts have low Titan Embeddings quota. If ingest fails with 429, wait 60s and retry upload.
+- **One ingestion job at a time**: Bedrock KB does not allow concurrent jobs. Upload one file at a time; wait for `ready` before uploading the next.
 
-**Resources Cleaned Up:**
-- CDK Stack (all Lambdas, API Gateway, DynamoDB, S3, Cognito)
-- Bedrock Knowledge Base (GWCJWPQZSF) and Data Source (7EVM39KBAD)
-- Amplify App (frontend hosting)
+### Architecture Diagram
 
-**What's Ready:**
-- All code committed to `main` branch
-- All 62 tests passing (unit + property-based)
-- ESLint clean, no warnings
-- Infrastructure code ready for re-deployment
-
-**What's Next:**
-- Deploy infrastructure: `cd infra && npx cdk deploy`
-- Create Bedrock KB and wire IDs into stack
-- Test full workflow with non-scanned PDFs
+See [`docs/architecture.drawio`](docs/architecture.drawio) — open in [draw.io](https://app.diagrams.net) for the full interactive AWS diagram with service icons.
 
 ---
 
