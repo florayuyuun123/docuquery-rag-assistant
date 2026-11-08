@@ -141,11 +141,50 @@ npm run lint
 
 ### Deployment
 
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for complete deployment guide including:
-- CDK stack deployment
-- Bedrock Knowledge Base setup
-- OpenSearch Serverless configuration
-- Amplify frontend deployment
+The full step-by-step guide is in **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**, covering:
+- CDK bootstrap and initial stack deploy
+- Bedrock Knowledge Base creation (IAM role, AOSS collection, vector index, KB, data source)
+- Re-deploy CDK with KB and Data Source IDs
+- Frontend environment variable setup and Amplify build
+
+**Quick re-deploy (after initial setup):**
+```bash
+cd infra
+npx cdk deploy \
+  --profile YOUR_PROFILE \
+  --require-approval never \
+  --context environment=dev \
+  --context awsRegion=us-east-1 \
+  --context awsAccountId=YOUR_ACCOUNT_ID \
+  --context knowledgeBaseId=YOUR_KB_ID \
+  --context dataSourceId=YOUR_DS_ID
+```
+
+**Cleanup (removes all AWS resources):**
+```bash
+# 1. Empty the S3 bucket first
+aws s3 rm s3://YOUR_BUCKET_NAME --recursive --profile YOUR_PROFILE
+
+# 2. Destroy the CDK stack
+cd infra
+npx cdk destroy --profile YOUR_PROFILE --force
+
+# 3. Delete the Bedrock Knowledge Base and data source (Python)
+python - <<'EOF'
+import boto3
+s = boto3.Session(profile_name="YOUR_PROFILE", region_name="us-east-1")
+b = s.client("bedrock-agent")
+b.delete_data_source(knowledgeBaseId="YOUR_KB_ID", dataSourceId="YOUR_DS_ID")
+b.delete_knowledge_base(knowledgeBaseId="YOUR_KB_ID")
+print("KB deleted")
+EOF
+
+# 4. Delete OpenSearch Serverless collection (if no longer needed)
+aws opensearchserverless delete-collection --id YOUR_COLLECTION_ID \
+  --region us-east-1 --profile YOUR_PROFILE
+```
+
+> See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete guide with all Python scripts.
 
 ---
 
