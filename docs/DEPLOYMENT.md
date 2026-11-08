@@ -20,7 +20,7 @@ node --version        # >= 20
 npm --version         # >= 10
 python --version      # >= 3.9
 cdk --version         # >= 2.x
-aws sts get-caller-identity --profile YOUR_PROFILE
+aws sts get-caller-identity --profile flotech-demo-account
 ```
 
 ---
@@ -46,7 +46,7 @@ npm run build --workspace=shared
 
 ```bash
 cd infra
-npx cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1 --profile YOUR_PROFILE
+npx cdk bootstrap aws://800445863339/us-east-1 --profile flotech-demo-account
 ```
 
 > **Note:** If bootstrap fails with `AWS::EarlyValidation::ResourceExistenceCheck`,
@@ -61,22 +61,22 @@ npx cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1 --profile YOUR_PROFILE
 ```bash
 cd infra
 npx cdk deploy \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --require-approval never \
   --context environment=dev \
   --context awsRegion=us-east-1 \
-  --context awsAccountId=YOUR_ACCOUNT_ID
+  --context awsAccountId=800445863339
 ```
 
 Save the CDK outputs - you will need them in later steps:
 
 ```
-DocuQueryStack.UserPoolId         = us-east-1_XXXXXXXXX
-DocuQueryStack.UserPoolClientId   = XXXXXXXXXXXXXXXXXXXXXXXXXX
-DocuQueryStack.IdentityPoolId     = us-east-1:XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-DocuQueryStack.ApiGatewayUrl      = https://XXXXXXXXXX.execute-api.us-east-1.amazonaws.com/dev/
-DocuQueryStack.DocumentBucketName = docuquerystack-documentbucketXXXXXXXX-XXXXXXXXXXXX
-DocuQueryStack.AmplifyAppId       = XXXXXXXXXX
+DocuQueryStack.UserPoolId         = us-east-1_LNk23zVUR
+DocuQueryStack.UserPoolClientId   = 7reecbmirkeue6br1ev6ghhkh
+DocuQueryStack.IdentityPoolId     = us-east-1:966f3f97-77b2-4d2a-92dd-2336d9b0974d
+DocuQueryStack.ApiGatewayUrl      = https://5tgtkxf6m8.execute-api.us-east-1.amazonaws.com/dev/
+DocuQueryStack.DocumentBucketName = docuquerystack-documentbucketae41e5a9-sfm67ewqxdwe
+DocuQueryStack.AmplifyAppId       = d2w3nvd0nztgjp
 ```
 
 ---
@@ -88,9 +88,9 @@ This requires several sub-steps. Run them in order.
 ### Step 5a - Create IAM Role for the Knowledge Base
 
 ```bash
-ACCOUNT_ID=YOUR_ACCOUNT_ID
-BUCKET_NAME=YOUR_BUCKET_NAME_FROM_STEP_4
-PROFILE=YOUR_PROFILE
+ACCOUNT_ID=800445863339
+BUCKET_NAME=docuquerystack-documentbucketae41e5a9-sfm67ewqxdwe
+PROFILE=flotech-demo-account
 
 # Create the role
 aws iam create-role \
@@ -146,7 +146,7 @@ aws iam put-role-policy \
 ### Step 5b - Create OpenSearch Serverless Collection
 
 ```bash
-PROFILE=YOUR_PROFILE
+PROFILE=flotech-demo-account
 
 # Encryption policy (required before creating the collection)
 aws opensearchserverless create-security-policy \
@@ -187,9 +187,9 @@ aws opensearchserverless list-collections \
 Then grant the KB role access to the collection index:
 
 ```bash
-COLLECTION_ID=YOUR_COLLECTION_ID
-ACCOUNT_ID=YOUR_ACCOUNT_ID
-PROFILE=YOUR_PROFILE
+COLLECTION_ID=9uh8a5ei1z5qh6luc4b4
+ACCOUNT_ID=800445863339
+PROFILE=flotech-demo-account
 
 aws iam put-role-policy \
   --role-name docuquery-kb-role \
@@ -246,8 +246,8 @@ import urllib.request
 from botocore.awsrequest import AWSRequest
 from botocore.auth import SigV4Auth
 
-PROFILE = "YOUR_PROFILE"
-COLLECTION_ID = "YOUR_COLLECTION_ID"
+PROFILE = "flotech-demo-account"
+COLLECTION_ID = "9uh8a5ei1z5qh6luc4b4"
 
 session = boto3.Session(profile_name=PROFILE, region_name="us-east-1")
 creds = session.get_credentials().get_frozen_credentials()
@@ -292,9 +292,9 @@ python create_index.py
 # create_kb.py
 import boto3
 
-PROFILE = "YOUR_PROFILE"
-ACCOUNT_ID = "YOUR_ACCOUNT_ID"
-COLLECTION_ID = "YOUR_COLLECTION_ID"
+PROFILE = "flotech-demo-account"
+ACCOUNT_ID = "800445863339"
+COLLECTION_ID = "9uh8a5ei1z5qh6luc4b4"
 
 session = boto3.Session(profile_name=PROFILE, region_name="us-east-1")
 client = session.client("bedrock-agent")
@@ -339,9 +339,9 @@ python create_kb.py
 # create_datasource.py
 import boto3
 
-PROFILE = "YOUR_PROFILE"
-KB_ID = "YOUR_KB_ID_FROM_STEP_5d"
-BUCKET_NAME = "YOUR_BUCKET_NAME_FROM_STEP_4"
+PROFILE = "flotech-demo-account"
+KB_ID = "C6KSVKHWW4"
+BUCKET_NAME = "docuquerystack-documentbucketae41e5a9-sfm67ewqxdwe"
 
 session = boto3.Session(profile_name=PROFILE, region_name="us-east-1")
 client = session.client("bedrock-agent")
@@ -383,13 +383,13 @@ Now that you have both IDs, wire them into the Lambda environment variables:
 ```bash
 cd infra
 npx cdk deploy \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --require-approval never \
   --context environment=dev \
   --context awsRegion=us-east-1 \
-  --context awsAccountId=YOUR_ACCOUNT_ID \
-  --context knowledgeBaseId=YOUR_KB_ID \
-  --context dataSourceId=YOUR_DATA_SOURCE_ID
+  --context awsAccountId=800445863339 \
+  --context knowledgeBaseId=C6KSVKHWW4 \
+  --context dataSourceId=HQRNCKCIII
 ```
 
 ---
@@ -399,11 +399,11 @@ npx cdk deploy \
 Create `frontend/.env.local` (this file is gitignored - never commit it):
 
 ```bash
-VITE_USER_POOL_ID=us-east-1_XXXXXXXXX
-VITE_USER_POOL_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXX
-VITE_IDENTITY_POOL_ID=us-east-1:XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-VITE_API_URL=https://XXXXXXXXXX.execute-api.us-east-1.amazonaws.com/dev/
-VITE_DOCUMENT_BUCKET_NAME=YOUR_BUCKET_NAME
+VITE_USER_POOL_ID=us-east-1_LNk23zVUR
+VITE_USER_POOL_CLIENT_ID=7reecbmirkeue6br1ev6ghhkh
+VITE_IDENTITY_POOL_ID=us-east-1:966f3f97-77b2-4d2a-92dd-2336d9b0974d
+VITE_API_URL=https://5tgtkxf6m8.execute-api.us-east-1.amazonaws.com/dev/
+VITE_DOCUMENT_BUCKET_NAME=docuquerystack-documentbucketae41e5a9-sfm67ewqxdwe
 ```
 
 Use the values from the CDK outputs saved in Step 4.
@@ -436,7 +436,7 @@ For Amplify hosting, the GitHub Actions CI/CD pipeline handles deployment automa
 aws cloudformation describe-stacks \
   --stack-name DocuQueryStack \
   --region us-east-1 \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --query "Stacks[0].StackStatus" \
   --output text
 # Expected: CREATE_COMPLETE or UPDATE_COMPLETE
@@ -448,7 +448,7 @@ aws cloudformation describe-stacks \
 aws lambda get-function-configuration \
   --function-name docuquery-query-dev \
   --region us-east-1 \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --query "Environment.Variables" \
   --output table
 # KNOWLEDGE_BASE_ID and DATA_SOURCE_ID must be set
@@ -457,7 +457,7 @@ aws lambda get-function-configuration \
 ### Run the API smoke test
 
 ```bash
-API_URL="https://XXXXXXXXXX.execute-api.us-east-1.amazonaws.com/dev"
+API_URL="https://5tgtkxf6m8.execute-api.us-east-1.amazonaws.com/dev"
 
 # Without auth - should return 401
 curl -s -o /dev/null -w "%{http_code}" $API_URL/documents
@@ -493,7 +493,7 @@ curl -X OPTIONS "$API_URL/documents" \
 The CDK stack cannot delete a non-empty S3 bucket. Empty it first:
 
 ```bash
-aws s3 rm s3://YOUR_BUCKET_NAME --recursive --profile YOUR_PROFILE
+aws s3 rm s3://docuquerystack-documentbucketae41e5a9-sfm67ewqxdwe --recursive --profile flotech-demo-account
 ```
 
 ### Step 2 - Destroy the CDK Stack
@@ -503,11 +503,11 @@ This removes all Lambda functions, API Gateway, DynamoDB, Cognito, S3 bucket, an
 ```bash
 cd infra
 npx cdk destroy \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --force \
   --context environment=dev \
   --context awsRegion=us-east-1 \
-  --context awsAccountId=YOUR_ACCOUNT_ID
+  --context awsAccountId=800445863339
 ```
 
 ### Step 3 - Delete the Bedrock Knowledge Base and Data Source
@@ -516,9 +516,9 @@ npx cdk destroy \
 # cleanup_kb.py
 import boto3
 
-PROFILE = "YOUR_PROFILE"
-KB_ID = "YOUR_KB_ID"
-DS_ID = "YOUR_DATA_SOURCE_ID"
+PROFILE = "flotech-demo-account"
+KB_ID = "C6KSVKHWW4"
+DS_ID = "HQRNCKCIII"
 
 session = boto3.Session(profile_name=PROFILE, region_name="us-east-1")
 client = session.client("bedrock-agent")
@@ -539,8 +539,8 @@ python cleanup_kb.py
 ### Step 4 - Delete OpenSearch Serverless Resources
 
 ```bash
-PROFILE=YOUR_PROFILE
-COLLECTION_ID=YOUR_COLLECTION_ID
+PROFILE=flotech-demo-account
+COLLECTION_ID=9uh8a5ei1z5qh6luc4b4
 
 # Delete access policy
 aws opensearchserverless delete-access-policy \
@@ -565,7 +565,7 @@ aws opensearchserverless delete-security-policy \
 ### Step 5 - Delete the KB IAM Role
 
 ```bash
-PROFILE=YOUR_PROFILE
+PROFILE=flotech-demo-account
 
 # Remove inline policies first
 for policy in S3Access BedrockEmbeddingAccess AOSSAccess; do
@@ -588,19 +588,19 @@ aws iam delete-role \
 aws cloudformation describe-stacks \
   --stack-name DocuQueryStack \
   --region us-east-1 \
-  --profile YOUR_PROFILE 2>&1
+  --profile flotech-demo-account 2>&1
 
 # Should return empty list
 aws bedrock-agent list-knowledge-bases \
   --region us-east-1 \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --query "knowledgeBaseSummaries[?name=='docuquery-dev']"
 
 # Should return empty list
 aws opensearchserverless list-collections \
   --collection-filters name=docuquery-vectors \
   --region us-east-1 \
-  --profile YOUR_PROFILE \
+  --profile flotech-demo-account \
   --query "collectionSummaries"
 ```
 
