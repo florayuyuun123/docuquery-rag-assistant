@@ -43,11 +43,13 @@ const DATA_SOURCE_ID = process.env['DATA_SOURCE_ID'] ?? '';
 
 /**
  * Retry a Bedrock StartIngestionJob call with exponential backoff.
- * Bedrock throttles at ~1 req/sec on new accounts — 429s are wrapped as ValidationException.
+ * Handles two transient errors:
+ * - 429 ThrottlingException / ValidationException("Too many requests")
+ * - 409 ConflictException — KB already has a running ingestion job; wait and retry
  */
 async function startIngestionWithRetry(
   command: StartIngestionJobCommand,
-  maxAttempts = 5,
+  maxAttempts = 8,
 ): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -58,8 +60,10 @@ async function startIngestionWithRetry(
       const isThrottle =
         error.name === 'ThrottlingException' ||
         (error.name === 'ValidationException' && (error.message ?? '').includes('Too many requests'));
-      if (isThrottle && attempt < maxAttempts) {
-        const delayMs = Math.min(1000 * 2 ** attempt, 30000);
+      const isConflict = error.name === 'ConflictException';
+      if ((isThrottle || isConflict) && attempt < maxAttempts) {
+        const baseDelay = isConflict ? 15000 : 1000;
+        const delayMs = Math.min(baseDelay * 2 ** (attempt - 1), 60000);
         await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
         continue;
       }

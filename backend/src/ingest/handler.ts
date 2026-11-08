@@ -75,11 +75,13 @@ function parseS3Key(key: string): { userId: string; documentId: string } | null 
 
 /**
  * Retry a Bedrock StartIngestionJob call with exponential backoff.
- * Bedrock throttles at ~1 req/sec on new accounts — 429s are wrapped as ValidationException.
+ * Handles two transient errors:
+ * - 429 ThrottlingException / ValidationException("Too many requests")
+ * - 409 ConflictException — KB already has a running ingestion job; wait and retry
  */
 async function startIngestionWithRetry(
   command: StartIngestionJobCommand,
-  maxAttempts = 5,
+  maxAttempts = 8,
 ): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -90,8 +92,11 @@ async function startIngestionWithRetry(
       const isThrottle =
         error.name === 'ThrottlingException' ||
         (error.name === 'ValidationException' && (error.message ?? '').includes('Too many requests'));
-      if (isThrottle && attempt < maxAttempts) {
-        const delayMs = Math.min(1000 * 2 ** attempt, 30000); // 2s, 4s, 8s, 16s, 30s
+      const isConflict = error.name === 'ConflictException';
+      if ((isThrottle || isConflict) && attempt < maxAttempts) {
+        // ConflictException means a job is already running — wait longer before retrying
+        const baseDelay = isConflict ? 15000 : 1000;
+        const delayMs = Math.min(baseDelay * 2 ** (attempt - 1), 60000);
         await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
